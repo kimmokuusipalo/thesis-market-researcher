@@ -42,7 +42,7 @@ package-lock.json
 #Vim swp files
 *.swp
 
-# Log files
+#Log files
 logs/
 *.orig
 *.log
@@ -53,5 +53,6 @@ server_log.txt
 CURSOR_RULES.md
 /.history
 
+#Sensitive info
 /RAG/
 /sources.md
