@@ -9,6 +9,7 @@ from typing import Dict, Any, Optional
 from .market_agents import IoTVerticalAgent, GeoSegmentationAgent, SegmentAgent, PositioningAgent
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
 import sys
+from datetime import datetime
 
 DISCLAIMER = "Disclaimer: The following data is synthetic and generated for illustrative purposes only."
 
@@ -158,3 +159,67 @@ class Planner:
             f"--- Strategic Positioning ---\n{self.context['positioning_result']}\n\n"
             f"=== End of Report ==="
         )
+
+    def format_final_report(self, vertical_result, geo_result, segment_result, positioning_result) -> str:
+        """
+        Formats the final report in a top-down, actionable, professional style with explicit market variable scoring.
+        """
+        now = datetime.now().strftime("%Y-%m-%d %H:%M")
+        separator = "\n" + "="*80 + "\n"
+
+        executive_summary = (
+            "1. [Key actionable insight 1 from agent results]"
+            "\n2. [Key actionable insight 2 from agent results]"
+            "\n3. [Key actionable insight 3 from agent results]"
+            "\n4. [Clear positioning recommendation]"
+            "\n5. [Summary of segment attractiveness]"
+        )
+
+        def market_variable_section(variable, explanation, score):
+            return (
+                f"**{variable}**\n"
+                f"Explanation: {explanation}\n"
+                f"Attractiveness score: {score}/5\n"
+            )
+
+        segment_deep_dive = "\n".join([
+            market_variable_section("Market size and growth rate", "[Explanation from segment_result]", "[Score]"),
+            market_variable_section("Profitability potential", "[Explanation from segment_result]", "[Score]"),
+            market_variable_section("Regulatory requirements", "[Explanation from segment_result]", "[Score]"),
+            market_variable_section("Competitive intensity", "[Explanation from segment_result]", "[Score]"),
+            market_variable_section("Digital maturity of customers", "[Explanation from segment_result]", "[Score]"),
+            market_variable_section("Customer consolidation", "[Explanation from segment_result]", "[Score]"),
+            market_variable_section("Technological readiness", "[Explanation from segment_result]", "[Score]"),
+        ])
+
+        positioning_section = (
+            "## Strategic Positioning Recommendation\n"
+            f"{positioning_result}\n"
+            "Actionable next steps:\n"
+            "- [Step 1]\n"
+            "- [Step 2]\n"
+        )
+
+        report = (
+            f"# IoT Market Segmentation & Positioning Report\n"
+            f"**Date:** {now}\n"
+            f"{separator}"
+            "## 1. Executive Summary\n"
+            f"{executive_summary}\n"
+            f"{separator}"
+            "## 2. Market Context\n"
+            "### 2.1 IoT Vertical Analysis\n"
+            f"{vertical_result}\n"
+            "### 2.2 Geo Segmentation Analysis\n"
+            f"{geo_result}\n"
+            f"{separator}"
+            "## 3. Market Segment Deep Dive\n"
+            f"{segment_deep_dive}\n"
+            f"{separator}"
+            f"{positioning_section}\n"
+            f"{separator}"
+            "## 5. Appendix\n"
+            "- The following data is synthetic and generated for illustrative purposes only.\n"
+            "- Sources: See private RAG index documentation.\n"
+        )
+        return report
