@@ -97,11 +97,14 @@ class Planner:
 
     def run(self, user_prompt: str) -> Dict[str, Any]:
         # Read private company capabilities if available
-        company_capabilities_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'company_capabilities.txt'))
+        company_capabilities_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'RAG', 'Company_Information', 'company_capabilities.txt'))
         company_capabilities = ""
         if os.path.exists(company_capabilities_path):
             with open(company_capabilities_path, 'r') as f:
                 company_capabilities = f.read().strip()
+            print(f"Company capabilities context loaded from /RAG/company_information/company_capabilities.txt")
+        else:
+            print("No company_capabilities.txt found in /RAG/company_information/")
 
         # Step 1: IoT Vertical Agent
         vertical_query = f"Key IoT applications, trends, and challenges in {self.vertical_name}"
