@@ -39,6 +39,22 @@ def open_task():
 
     return task
 
+def format_segment_name(raw_segment: str) -> str:
+    """
+    Clean and format a segment name for safe use in filenames.
+    - Replaces spaces and dashes with underscores
+    - Removes non-alphanumeric/underscore characters
+    - Converts to TitleCase with underscores
+    """
+    import re
+    # Replace em/en dashes and hyphens with underscores
+    s = re.sub(r"[\s\-–—]+", "_", raw_segment)
+    # Remove all non-alphanumeric/underscore
+    s = re.sub(r"[^A-Za-z0-9_]", "", s)
+    # Remove leading/trailing underscores
+    s = s.strip("_")
+    return s
+
 async def run_research_task(query, websocket=None, stream_output=None, tone=Tone.Objective, headers=None):
     task = open_task()
     task["query"] = query
@@ -71,10 +87,6 @@ async def main():
                 "total_tokens": usage.total_tokens
             }
         return text
-    vertical_name = os.environ.get("VERTICAL") or "Smart Cities"
-    region = os.environ.get("REGION") or "Finland"
-    system_architecture = os.environ.get("SYSTEM_ARCHITECTURE") or "Cloud Platform"
-    planner = Planner(llm_client, vertical_name, region, system_architecture)
     rag_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'RAG'))
     try:
         while True:
@@ -87,14 +99,26 @@ async def main():
                     print(f" - {p}")
             else:
                 print("No RAG directory found at:", rag_dir)
-            user_prompt = input("\nEnter your user prompt (or press Ctrl+C to exit): ")
+            raw_segment = input("\nEnter IoT Vertical – Geography pair (example: Smart Waste — Finland): ")
+            segment_name = format_segment_name(raw_segment)
+            print(f"Processing segment: {segment_name}")
+            vertical_name = raw_segment.split('—')[0].strip() if '—' in raw_segment else raw_segment.split('-')[0].strip()
+            region = raw_segment.split('—')[1].strip() if '—' in raw_segment else (raw_segment.split('-')[1].strip() if '-' in raw_segment else "")
+            system_architecture = os.environ.get("SYSTEM_ARCHITECTURE") or "Cloud Platform"
+            planner = Planner(llm_client, vertical_name, region, system_architecture)
+            user_prompt = input("Enter your user prompt (or type 'exit' to quit): ")
+            if user_prompt.lower() == "exit":
+                print("Exiting...")
+                sys.exit(0)
             context = planner.run(user_prompt)
             report = context["final_report"]
-            artifact_filepath = f"outputs/{uuid4()}.md"
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"Final_Report_{segment_name}_{timestamp}.txt"
             os.makedirs("outputs", exist_ok=True)
-            with open(artifact_filepath, "w") as f:
+            with open(f"outputs/{filename}", "w") as f:
                 f.write(report)
-            print(f"Report written to '{artifact_filepath}'")
+            print(f"Report written to 'outputs/{filename}'")
     except KeyboardInterrupt:
         print("\nExiting...")
         sys.exit(0)
