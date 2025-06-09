@@ -5,9 +5,11 @@ import uuid
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from multi_agents.agents import ChiefEditorAgent
+from multi_agents.agents.planner import Planner
 import asyncio
 import json
 from gpt_researcher.utils.enum import Tone
+from gpt_researcher.utils.llm import create_chat_completion
 
 # Run with LangSmith if API key is set
 if os.environ.get("LANGCHAIN_API_KEY"):
@@ -50,12 +52,30 @@ async def run_research_task(query, websocket=None, stream_output=None, tone=Tone
     return research_report
 
 async def main():
-    task = open_task()
-
-    chief_editor = ChiefEditorAgent(task)
-    research_report = await chief_editor.run_research_task(task_id=uuid.uuid4())
-
-    return research_report
+    import os
+    from openai import OpenAI
+    from uuid import uuid4
+    query = os.environ.get("QUERY") or "What are the key IoT opportunities in Smart Cities in Finland?"
+    vertical_name = os.environ.get("VERTICAL") or "Smart Cities"
+    region = os.environ.get("REGION") or "Finland"
+    system_architecture = os.environ.get("SYSTEM_ARCHITECTURE") or "Cloud Platform"
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    client = OpenAI(api_key=openai_api_key)
+    def llm_client(prompt):
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "system", "content": prompt}]
+        )
+        return response.choices[0].message.content
+    planner = Planner(llm_client, vertical_name, region, system_architecture)
+    context = planner.run(query)
+    report = context["final_report"]
+    artifact_filepath = f"outputs/{uuid4()}.md"
+    os.makedirs("outputs", exist_ok=True)
+    with open(artifact_filepath, "w") as f:
+        f.write(report)
+    print(f"Report written to '{artifact_filepath}'")
+    return report
 
 if __name__ == "__main__":
     asyncio.run(main())

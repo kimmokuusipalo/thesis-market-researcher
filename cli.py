@@ -19,6 +19,8 @@ from dotenv import load_dotenv
 from gpt_researcher import GPTResearcher
 from gpt_researcher.utils.enum import ReportType, Tone
 from backend.report_type import DetailedReport
+from multi_agents.agents.planner import Planner
+from gpt_researcher.utils.llm import create_chat_completion
 
 # =============================================================================
 # CLI
@@ -96,50 +98,30 @@ cli.add_argument(
 
 async def main(args):
     """
-    Conduct research on the given query, generate the report, and write
-    it as a markdown file to the output directory.
+    Run the custom 4-step agentic market research pipeline and write the final report to the output directory.
     """
-    query_domains = args.query_domains.split(",") if args.query_domains else []
+    # Parse CLI args
+    query = args.query
+    vertical_name = getattr(args, 'vertical', None) or "Smart Cities"
+    region = getattr(args, 'region', None) or "Finland"
+    system_architecture = getattr(args, 'system_architecture', None) or "Cloud Platform"
 
-    if args.report_type == 'detailed_report':
-        detailed_report = DetailedReport(
-            query=args.query,
-            query_domains=query_domains,
-            report_type="research_report",
-            report_source="web_search",
+    # Use OpenAI LLM as default (can be replaced with any callable)
+    import os
+    from openai import OpenAI
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    client = OpenAI(api_key=openai_api_key)
+    def llm_client(prompt):
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "system", "content": prompt}]
         )
+        return response.choices[0].message.content
 
-        report = await detailed_report.run()
-    else:
-        # Convert the simple keyword to the full Tone enum value
-        tone_map = {
-            "objective": Tone.Objective,
-            "formal": Tone.Formal,
-            "analytical": Tone.Analytical,
-            "persuasive": Tone.Persuasive,
-            "informative": Tone.Informative,
-            "explanatory": Tone.Explanatory,
-            "descriptive": Tone.Descriptive,
-            "critical": Tone.Critical,
-            "comparative": Tone.Comparative,
-            "speculative": Tone.Speculative,
-            "reflective": Tone.Reflective,
-            "narrative": Tone.Narrative,
-            "humorous": Tone.Humorous,
-            "optimistic": Tone.Optimistic,
-            "pessimistic": Tone.Pessimistic
-        }
-
-        researcher = GPTResearcher(
-            query=args.query,
-            query_domains=query_domains,
-            report_type=args.report_type,
-            tone=tone_map[args.tone]
-        )
-
-        await researcher.conduct_research()
-
-        report = await researcher.write_report()
+    # Run the Planner
+    planner = Planner(llm_client, vertical_name, region, system_architecture)
+    context = planner.run(query)
+    report = context["final_report"]
 
     # Write the report to a file
     artifact_filepath = f"outputs/{uuid4()}.md"
