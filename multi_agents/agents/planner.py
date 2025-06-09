@@ -8,8 +8,14 @@ Web Crawler is NOT used; only RAG retrieval from local docs is performed.
 from typing import Dict, Any, Optional
 from .market_agents import IoTVerticalAgent, GeoSegmentationAgent, SegmentAgent, PositioningAgent
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+import sys
 
 DISCLAIMER = "Disclaimer: The following data is synthetic and generated for illustrative purposes only."
+
+# Pricing for GPT-4o (EUR)
+GPT4O_INPUT_EUR_PER_1M = 4.60
+GPT4O_OUTPUT_EUR_PER_1M = 13.80
+COST_LIMIT_EUR = 20.0
 
 class Planner:
     def __init__(self, llm_client, vertical_name: str, region: str, system_architecture: Optional[str] = None, doc_path: str = "./my-docs"):
@@ -19,13 +25,42 @@ class Planner:
         self.system_architecture = system_architecture
         self.context: Dict[str, Any] = {}
         self.agents = {
-            'vertical': IoTVerticalAgent(llm_client),
-            'geo': GeoSegmentationAgent(llm_client),
-            'segment': SegmentAgent(llm_client),
-            'positioning': PositioningAgent(llm_client)
+            'vertical': IoTVerticalAgent(self._llm_with_token_logging("IoT Vertical Agent")),
+            'geo': GeoSegmentationAgent(self._llm_with_token_logging("Geo Segmentation Agent")),
+            'segment': SegmentAgent(self._llm_with_token_logging("Segment Agent")),
+            'positioning': PositioningAgent(self._llm_with_token_logging("Positioning Agent"))
         }
         # Build LlamaIndex index once
         self._build_rag_index(doc_path)
+        self.total_input_tokens = 0
+        self.total_output_tokens = 0
+        self.total_cost_eur = 0.0
+
+    def _llm_with_token_logging(self, agent_name):
+        def wrapper(prompt, **kwargs):
+            response = self.llm_client(prompt, return_usage=True, **kwargs)
+            # response: (text, usage_dict)
+            if isinstance(response, tuple) and len(response) == 2:
+                text, usage = response
+                input_tokens = usage.get('prompt_tokens', 0)
+                output_tokens = usage.get('completion_tokens', 0)
+                total_tokens = usage.get('total_tokens', input_tokens + output_tokens)
+                # Cost calculation
+                input_cost = (input_tokens / 1_000_000) * GPT4O_INPUT_EUR_PER_1M
+                output_cost = (output_tokens / 1_000_000) * GPT4O_OUTPUT_EUR_PER_1M
+                total_cost = input_cost + output_cost
+                self.total_input_tokens += input_tokens
+                self.total_output_tokens += output_tokens
+                self.total_cost_eur += total_cost
+                print(f"Agent: {agent_name} | Input tokens: {input_tokens} | Output tokens: {output_tokens} | Total tokens: {total_tokens} | Estimated cost: €{total_cost:.2f}")
+                if self.total_cost_eur > COST_LIMIT_EUR:
+                    print(f"Safeguard triggered: Estimated cost exceeded €20 — aborting run.")
+                    sys.exit(1)
+                return text
+            else:
+                # Fallback: no usage info
+                return response
+        return wrapper
 
     def _build_rag_index(self, doc_path: str):
         # Load and index documents from the specified folder
@@ -100,6 +135,13 @@ class Planner:
             system_architecture=self.system_architecture
         )
         self.context['positioning_result'] = positioning_result
+
+        # Print final summary
+        print(f"\n=== Token & Cost Summary ===")
+        print(f"Total input tokens: {self.total_input_tokens}")
+        print(f"Total output tokens: {self.total_output_tokens}")
+        print(f"Total tokens: {self.total_input_tokens + self.total_output_tokens}")
+        print(f"Estimated total cost: €{self.total_cost_eur:.2f}")
 
         # Assemble Final Report
         final_report = self._assemble_report(user_prompt)
