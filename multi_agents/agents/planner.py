@@ -6,7 +6,7 @@ Each agent receives the user prompt, all required prior context, and retrieved R
 Web Crawler is NOT used; only RAG retrieval from local docs is performed.
 """
 from typing import Dict, Any, Optional
-from .market_agents import IoTVerticalAgent, GeoSegmentationAgent, SegmentAgent, PositioningAgent
+from .market_agents import IoTVerticalAgent, GeoSegmentationAgent, SegmentAgent, PositioningAgent, CompanyAgent, SegmentRankingAgent
 import os
 from multi_agents.config import USE_RAG, RAG_ACTIVE_DIRECTORY
 from glob import glob
@@ -123,16 +123,21 @@ class Planner:
 
     def run(self, user_prompt: str, report_filename: str = None) -> Dict[str, Any]:
         import time
+        import pandas as pd
+        import re
         start_time = time.time()
         # Read private company capabilities if available
         company_capabilities_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', RAG_ACTIVE_DIRECTORY, 'Company_Information', 'company_capabilities.txt'))
         company_capabilities = ""
-        if os.path.exists(company_capabilities_path):
+        company_agent_should_run = os.path.exists(company_capabilities_path)
+        if company_agent_should_run:
             with open(company_capabilities_path, 'r') as f:
                 company_capabilities = f.read().strip()
             print(f"Company capabilities context loaded from /{RAG_ACTIVE_DIRECTORY}/Company_Information/company_capabilities.txt")
+            print("[LOG] Company Agent will be run.")
         else:
             print(f"No company_capabilities.txt found in /{RAG_ACTIVE_DIRECTORY}/Company_Information/")
+            print("[LOG] Company Agent will be skipped.")
 
         # Step 1: IoT Vertical Agent
         vertical_query = self._get_contextual_rag_query(
@@ -193,6 +198,57 @@ class Planner:
         )
         self.context['positioning_result'] = positioning_result
 
+        # Step 5: Company Agent (optional)
+        if company_agent_should_run:
+            if 'company' not in self.agents:
+                self.agents['company'] = CompanyAgent(self._llm_with_token_logging("Company Agent"))
+            company_result = self.agents['company'].run(
+                user_prompt=user_prompt,
+                prior_context={
+                    'vertical_result': vertical_result,
+                    'geo_result': geo_result,
+                    'segment_result': segment_result,
+                    'positioning_result': positioning_result
+                },
+                rag_context=company_capabilities
+            )
+            self.context['company_result'] = company_result
+            # Step 6: Segment Ranking Agent (optional)
+            if 'segment_ranking' not in self.agents:
+                self.agents['segment_ranking'] = SegmentRankingAgent(self._llm_with_token_logging("Segment Ranking Agent"))
+            segment_ranking_md = self.agents['segment_ranking'].run(
+                prior_context={
+                    'segment_result': segment_result,
+                    'positioning_result': positioning_result
+                },
+                company_capabilities=company_capabilities
+            )
+            self.context['segment_ranking_md'] = segment_ranking_md
+            # Export to Excel
+            # Parse markdown table to DataFrame
+            match = re.search(r"\|(.|\n)*?\|\n", segment_ranking_md)
+            if match:
+                table_md = segment_ranking_md[match.start():]
+                try:
+                    df = pd.read_csv(pd.compat.StringIO(table_md.replace('|', ',')), skipinitialspace=True)
+                except Exception:
+                    # Fallback: use tabulate if available
+                    from io import StringIO
+                    import csv
+                    lines = [l.strip() for l in table_md.strip().split('\n') if l.strip() and l.strip().startswith('|')]
+                    rows = [l.strip('|').split('|') for l in lines]
+                    df = pd.DataFrame(rows[1:], columns=[c.strip() for c in rows[0]])
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                excel_filename = f"Segment_Ranking_{self.region}_{timestamp}.xlsx"
+                excel_path = os.path.join("outputs", excel_filename)
+                df.to_excel(excel_path, index=False)
+                print(f"[LOG] Segment Ranking table exported to Excel: {excel_path}")
+            else:
+                print("[WARN] Could not parse Segment Ranking markdown table for Excel export.")
+        else:
+            self.context['company_result'] = None
+            self.context['segment_ranking_md'] = None
+
         # Print final summary
         print(f"\n=== Token & Cost Summary ===")
         print(f"Total input tokens: {self.total_input_tokens}")
@@ -216,76 +272,17 @@ class Planner:
         return self.context
 
     def _assemble_report(self, user_prompt: str) -> str:
-        return (
+        report = (
             f"=== IoT Market Research Thesis Report ===\n\n"
             f"User Prompt: {user_prompt}\n\n"
             f"--- IoT Vertical Analysis ---\n{self.context['vertical_result']}\n\n"
             f"--- Geo Segmentation Analysis ---\n{self.context['geo_result']}\n\n"
             f"--- Segment Synthesis ---\n{self.context['segment_result']}\n\n"
             f"--- Strategic Positioning ---\n{self.context['positioning_result']}\n\n"
-            f"=== End of Report ==="
         )
-
-    def format_final_report(self, vertical_result, geo_result, segment_result, positioning_result) -> str:
-        """
-        Formats the final report in a top-down, actionable, professional style with explicit market variable scoring.
-        """
-        now = datetime.now().strftime("%Y-%m-%d %H:%M")
-        separator = "\n" + "="*80 + "\n"
-
-        executive_summary = (
-            "1. [Key actionable insight 1 from agent results]"
-            "\n2. [Key actionable insight 2 from agent results]"
-            "\n3. [Key actionable insight 3 from agent results]"
-            "\n4. [Clear positioning recommendation]"
-            "\n5. [Summary of segment attractiveness]"
-        )
-
-        def market_variable_section(variable, explanation, score):
-            return (
-                f"**{variable}**\n"
-                f"Explanation: {explanation}\n"
-                f"Attractiveness score: {score}/5\n"
-            )
-
-        segment_deep_dive = "\n".join([
-            market_variable_section("Market size and growth rate", "[Explanation from segment_result]", "[Score]"),
-            market_variable_section("Profitability potential", "[Explanation from segment_result]", "[Score]"),
-            market_variable_section("Regulatory requirements", "[Explanation from segment_result]", "[Score]"),
-            market_variable_section("Competitive intensity", "[Explanation from segment_result]", "[Score]"),
-            market_variable_section("Digital maturity of customers", "[Explanation from segment_result]", "[Score]"),
-            market_variable_section("Customer consolidation", "[Explanation from segment_result]", "[Score]"),
-            market_variable_section("Technological readiness", "[Explanation from segment_result]", "[Score]"),
-        ])
-
-        positioning_section = (
-            "## Strategic Positioning Recommendation\n"
-            f"{positioning_result}\n"
-            "Actionable next steps:\n"
-            "- [Step 1]\n"
-            "- [Step 2]\n"
-        )
-
-        report = (
-            f"# IoT Market Segmentation & Positioning Report\n"
-            f"**Date:** {now}\n"
-            f"{separator}"
-            "## 1. Executive Summary\n"
-            f"{executive_summary}\n"
-            f"{separator}"
-            "## 2. Market Context\n"
-            "### 2.1 IoT Vertical Analysis\n"
-            f"{vertical_result}\n"
-            "### 2.2 Geo Segmentation Analysis\n"
-            f"{geo_result}\n"
-            f"{separator}"
-            "## 3. Market Segment Deep Dive\n"
-            f"{segment_deep_dive}\n"
-            f"{separator}"
-            f"{positioning_section}\n"
-            f"{separator}"
-            "## 5. Appendix\n"
-            "- The following data is synthetic and generated for illustrative purposes only.\n"
-            "- Sources: See private RAG index documentation.\n"
-        )
+        if self.context.get('company_result'):
+            report += f"--- Company Validation of Positioning ---\n{self.context['company_result']}\n\n"
+        if self.context.get('segment_ranking_md'):
+            report += f"--- Segment Ranking Table ---\n{self.context['segment_ranking_md']}\n\n"
+        report += f"=== End of Report ==="
         return report
