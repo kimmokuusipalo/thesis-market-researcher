@@ -59,20 +59,43 @@ class SegmentAgent:
     def __init__(self, llm_client):
         self.llm_client = llm_client
         self.prompt_template = (
-            "# Segment Synthesis\n"
-            "Role: Strategic Market Segment Analyst.\n"
-            "Task: Combine IoT vertical and geographical analysis to define actionable market segments.\n"
-            "Instructions:\n"
-            "- Present key segment characteristics.\n"
-            "- Prioritize segments based on opportunity metrics (growth, competition, etc.).\n"
-            "- Mark data as synthetic."
+            """
+# Segment Synthesis
+Role: Strategic Market Segment Analyst.
+
+Task: Combine IoT vertical and geographical analysis to define actionable market segments for IoT vendors.
+
+Context:
+- You will receive:
+    - The user prompt
+    - IoT Vertical Agent output (vertical characteristics and trends)
+    - Geo Segmentation Agent output (geography-specific market dynamics)
+    - RAG context (retrieved high-quality documents)
+
+Instructions:
+- Using the provided context, analyze and define one or more actionable market segments in the given geography and IoT vertical.
+- For each segment, explicitly evaluate the following variables:
+
+    1. Market size and growth rate
+    2. Profitability potential
+    3. Regulatory requirements (certifications, standards, data privacy laws)
+    4. Competitive intensity (market concentration, number of players)
+    5. Digital maturity of customers (PoC readiness, full-scale adoption potential)
+    6. Customer consolidation (types of buyers, complexity of buying centers)
+    7. Technological readiness (existing IoT use, integration capabilities, cloud readiness)
+
+- Present each segment clearly, structured under these variable headings.
+- If any variable lacks sufficient information, state so explicitly.
+
+- Remember: The following data is synthetic and generated for illustrative purposes only.
+"""
         )
 
     def run(self, user_prompt: str, prior_context: Dict, rag_context: str = "") -> str:
         vertical_result = prior_context.get("vertical_result", "")
         geo_result = prior_context.get("geo_result", "")
         prompt = (
-            f"{self.prompt_template}\n\n"
+            f"{self.prompt_template}\n"
             f"User Prompt: {user_prompt}\n\n"
             f"[IoT Vertical Result]\n{vertical_result}\n\n"
             f"[Geo Segmentation Result]\n{geo_result}\n\n"
