@@ -57,6 +57,7 @@ langgraph-checkpoint>=2.0.26
 langgraph-cli>=0.2.10
 langgraph-sdk>=0.1.70
 langsmith>=0.3.42
+llama-index>=0.10.0
 litellm>=1.71.0
 loguru>=0.7.2
 lxml>=4.9.2
