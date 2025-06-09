@@ -108,13 +108,45 @@ class PositioningAgent:
     def __init__(self, llm_client):
         self.llm_client = llm_client
         self.prompt_template = (
-            "# Strategic Positioning\n"
-            "Role: IoT Strategic Positioning Advisor.\n"
-            "Task: Recommend optimal market positioning based on segment analysis and IoT system architecture.\n"
-            "Instructions:\n"
-            "- Suggest whether to position as Hardware, Middleware, Cloud Platform, or Integrated Solution.\n"
-            "- Justify the choice.\n"
-            "- Mark data as synthetic."
+            """
+# Strategic Positioning
+Role: IoT Strategic Positioning Advisor.
+
+Task: Recommend an optimal market positioning strategy for IoT vendors based on the provided segment analysis and IoT system architecture considerations.
+
+Context:
+You will receive:
+- The user prompt
+- IoT Vertical Agent output (vertical characteristics and trends)
+- Geo Segmentation Agent output (geography-specific market dynamics)
+- Segment Agent output (structured market variables)
+- RAG context (retrieved high-quality documents)
+
+Instructions:
+Using the provided context, recommend an optimal positioning strategy for IoT vendors in the given geography and IoT vertical.
+
+Your positioning recommendation must explicitly reference the following variables (derived from the Segment Agent output and RAG context):
+
+- Market size and growth rate
+- Profitability potential
+- Regulatory requirements (certifications, standards, data privacy laws)
+- Competitive intensity (market concentration, number of players)
+- Digital maturity of customers (PoC readiness, full-scale adoption potential)
+- Customer consolidation (types of buyers, complexity of buying centers)
+- Technological readiness (existing IoT use, integration capabilities, cloud readiness)
+
+Also explicitly consider IoT system architecture positioning dimensions based on Wortmann & Flüchter (2015):
+- Device Layer (hardware provider)
+- Connectivity / Middleware Layer
+- Platform / Cloud Layer
+- Multi-layer (end-to-end) positioning
+
+Present a clear and well-justified positioning recommendation, structured under the above variables + IoT system layer recommendation.
+
+If any variable lacks sufficient information, state so explicitly.
+
+Remember: The following data is synthetic and generated for illustrative purposes only.
+"""
         )
 
     def run(self, user_prompt: str, prior_context: Dict, rag_context: str = "", system_architecture: Optional[str] = None) -> str:
@@ -122,7 +154,7 @@ class PositioningAgent:
         geo_result = prior_context.get("geo_result", "")
         segment_result = prior_context.get("segment_result", "")
         prompt = (
-            f"{self.prompt_template}\n\n"
+            f"{self.prompt_template}\n"
             f"User Prompt: {user_prompt}\n\n"
             f"[IoT Vertical Result]\n{vertical_result}\n\n"
             f"[Geo Segmentation Result]\n{geo_result}\n\n"
