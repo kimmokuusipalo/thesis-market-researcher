@@ -68,12 +68,24 @@ async def run_research_task(query, websocket=None, stream_output=None, tone=Tone
 
     return research_report
 
+def extract_vertical_and_region(user_prompt: str):
+    import re
+    # Try to match "<vertical> in <region>" (case-insensitive)
+    match = re.search(r"(.+?)\s+in\s+([A-Za-z0-9 ,()]+)$", user_prompt.strip(), re.IGNORECASE)
+    if match:
+        vertical = match.group(1).strip()
+        region = match.group(2).strip()
+        return vertical, region
+    # fallback: use defaults
+    return "Smart Cities", "Finland"
+
 async def main():
     import os
     from openai import OpenAI
     from uuid import uuid4
     import sys
     from datetime import datetime
+    from multi_agents.config import RAG_ACTIVE_DIRECTORY
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     def llm_client(prompt, return_usage=False, **kwargs):
         response = client.chat.completions.create(
@@ -89,12 +101,6 @@ async def main():
                 "total_tokens": usage.total_tokens
             }
         return text
-    rag_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'RAG'))
-    # Use default vertical/region/system_architecture for CLI, but let user_prompt drive context
-    vertical_name = os.environ.get("VERTICAL") or "Smart Cities"
-    region = os.environ.get("REGION") or "Finland"
-    system_architecture = os.environ.get("SYSTEM_ARCHITECTURE") or "Cloud Platform"
-    planner = Planner(llm_client, vertical_name, region, system_architecture)
     try:
         while True:
             print("\n==== New Run ====")
@@ -116,8 +122,11 @@ async def main():
             if user_prompt.lower() == "exit":
                 print("Exiting...")
                 sys.exit(0)
+            vertical_name, region = extract_vertical_and_region(user_prompt)
+            system_architecture = os.environ.get("SYSTEM_ARCHITECTURE") or "Cloud Platform"
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"Final_Report_{timestamp}.txt"
+            planner = Planner(llm_client, vertical_name, region, system_architecture)
             context = planner.run(user_prompt, report_filename=filename)
             report = context["final_report"]
             os.makedirs("outputs", exist_ok=True)

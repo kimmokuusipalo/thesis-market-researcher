@@ -107,12 +107,12 @@ class Planner:
         """
         Returns a geo-filtered query string for get_rag_context().
         The prefix is:
-        "Context: This query is about [segment_vertical] in [segment_geo] only. Exclude information about other geographies (e.g. Finland, Sweden, or any country not equal to [segment_geo]). "
+        "Context: This query is about [segment_vertical] in [segment_geo] only. Exclude information about other geographies not equal to [segment_geo]. "
         The rest of the query is then appended.
         """
         prefix = (
             f"Context: This query is about {segment_vertical} in {segment_geo} only. "
-            f"Exclude information about other geographies (e.g. Finland, Sweden, or any country not equal to {segment_geo}). "
+            f"Exclude information about other geographies not equal to {segment_geo}. "
         )
         return prefix + original_query
 
@@ -125,14 +125,14 @@ class Planner:
         import time
         start_time = time.time()
         # Read private company capabilities if available
-        company_capabilities_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'RAG', 'Company_Information', 'company_capabilities.txt'))
+        company_capabilities_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', RAG_ACTIVE_DIRECTORY, 'Company_Information', 'company_capabilities.txt'))
         company_capabilities = ""
         if os.path.exists(company_capabilities_path):
             with open(company_capabilities_path, 'r') as f:
                 company_capabilities = f.read().strip()
-            print(f"Company capabilities context loaded from /RAG/company_information/company_capabilities.txt")
+            print(f"Company capabilities context loaded from /{RAG_ACTIVE_DIRECTORY}/Company_Information/company_capabilities.txt")
         else:
-            print("No company_capabilities.txt found in /RAG/company_information/")
+            print(f"No company_capabilities.txt found in /{RAG_ACTIVE_DIRECTORY}/Company_Information/")
 
         # Step 1: IoT Vertical Agent
         vertical_query = self._get_contextual_rag_query(
