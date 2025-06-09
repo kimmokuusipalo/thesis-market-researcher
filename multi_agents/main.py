@@ -55,12 +55,8 @@ async def main():
     import os
     from openai import OpenAI
     from uuid import uuid4
-    query = os.environ.get("QUERY") or "What are the key IoT opportunities in Smart Cities in Finland?"
-    vertical_name = os.environ.get("VERTICAL") or "Smart Cities"
-    region = os.environ.get("REGION") or "Finland"
-    system_architecture = os.environ.get("SYSTEM_ARCHITECTURE") or "Cloud Platform"
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    client = OpenAI(api_key=openai_api_key)
+    import sys
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     def llm_client(prompt, return_usage=False, **kwargs):
         response = client.chat.completions.create(
             model="gpt-4",
@@ -75,15 +71,33 @@ async def main():
                 "total_tokens": usage.total_tokens
             }
         return text
+    vertical_name = os.environ.get("VERTICAL") or "Smart Cities"
+    region = os.environ.get("REGION") or "Finland"
+    system_architecture = os.environ.get("SYSTEM_ARCHITECTURE") or "Cloud Platform"
     planner = Planner(llm_client, vertical_name, region, system_architecture)
-    context = planner.run(query)
-    report = context["final_report"]
-    artifact_filepath = f"outputs/{uuid4()}.md"
-    os.makedirs("outputs", exist_ok=True)
-    with open(artifact_filepath, "w") as f:
-        f.write(report)
-    print(f"Report written to '{artifact_filepath}'")
-    return report
+    rag_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'RAG'))
+    try:
+        while True:
+            print("\n==== New Run ====")
+            # List available RAG folders (Vertical–Geography pairs)
+            if os.path.exists(rag_dir):
+                pairs = [d for d in os.listdir(rag_dir) if os.path.isdir(os.path.join(rag_dir, d))]
+                print("Available RAG folders (IoT Vertical–Geography pairs):")
+                for p in pairs:
+                    print(f" - {p}")
+            else:
+                print("No RAG directory found at:", rag_dir)
+            user_prompt = input("\nEnter your user prompt (or press Ctrl+C to exit): ")
+            context = planner.run(user_prompt)
+            report = context["final_report"]
+            artifact_filepath = f"outputs/{uuid4()}.md"
+            os.makedirs("outputs", exist_ok=True)
+            with open(artifact_filepath, "w") as f:
+                f.write(report)
+            print(f"Report written to '{artifact_filepath}'")
+    except KeyboardInterrupt:
+        print("\nExiting...")
+        sys.exit(0)
 
 if __name__ == "__main__":
     asyncio.run(main())
