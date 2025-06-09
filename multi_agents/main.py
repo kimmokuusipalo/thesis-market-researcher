@@ -10,6 +10,7 @@ import asyncio
 import json
 from gpt_researcher.utils.enum import Tone
 from gpt_researcher.utils.llm import create_chat_completion
+from multi_agents.config import RAG_ACTIVE_DIRECTORY
 
 # Run with LangSmith if API key is set
 if os.environ.get("LANGCHAIN_API_KEY"):
@@ -72,6 +73,7 @@ async def main():
     from openai import OpenAI
     from uuid import uuid4
     import sys
+    from datetime import datetime
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     def llm_client(prompt, return_usage=False, **kwargs):
         response = client.chat.completions.create(
@@ -88,37 +90,42 @@ async def main():
             }
         return text
     rag_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'RAG'))
+    # Use default vertical/region/system_architecture for CLI, but let user_prompt drive context
+    vertical_name = os.environ.get("VERTICAL") or "Smart Cities"
+    region = os.environ.get("REGION") or "Finland"
+    system_architecture = os.environ.get("SYSTEM_ARCHITECTURE") or "Cloud Platform"
+    planner = Planner(llm_client, vertical_name, region, system_architecture)
     try:
         while True:
             print("\n==== New Run ====")
-            # List available RAG folders (Vertical–Geography pairs)
-            if os.path.exists(rag_dir):
-                pairs = [d for d in os.listdir(rag_dir) if os.path.isdir(os.path.join(rag_dir, d))]
-                print("Available RAG folders (IoT Vertical–Geography pairs):")
-                for p in pairs:
+            # List available RAG folders (IoT Vertical–Geography pairs):
+            active_rag_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', RAG_ACTIVE_DIRECTORY))
+            if os.path.exists(active_rag_dir):
+                pairs = [d for d in os.listdir(active_rag_dir) if os.path.isdir(os.path.join(active_rag_dir, d))]
+                pairs_main = [p for p in pairs if p.lower() != "company_information"]
+                print(f"Available RAG folders (IoT Vertical–Geography pairs) in {RAG_ACTIVE_DIRECTORY}/:")
+                for p in pairs_main:
                     print(f" - {p}")
+                if "Company_Information" in pairs or "company_information" in pairs:
+                    print("(Private) Company_Information folder detected.")
             else:
-                print("No RAG directory found at:", rag_dir)
-            raw_segment = input("\nEnter IoT Vertical – Geography pair (example: Smart Waste — Finland): ")
-            segment_name = format_segment_name(raw_segment)
-            print(f"Processing segment: {segment_name}")
-            vertical_name = raw_segment.split('—')[0].strip() if '—' in raw_segment else raw_segment.split('-')[0].strip()
-            region = raw_segment.split('—')[1].strip() if '—' in raw_segment else (raw_segment.split('-')[1].strip() if '-' in raw_segment else "")
-            system_architecture = os.environ.get("SYSTEM_ARCHITECTURE") or "Cloud Platform"
-            planner = Planner(llm_client, vertical_name, region, system_architecture)
+                print(f"No RAG directory found at: {active_rag_dir}")
+            print("[LOG] multi_agents/main.py: Pipeline invoked (frontend or CLI)")
+            sys.stdout.flush()
             user_prompt = input("Enter your user prompt (or type 'exit' to quit): ")
             if user_prompt.lower() == "exit":
                 print("Exiting...")
                 sys.exit(0)
-            context = planner.run(user_prompt)
-            report = context["final_report"]
-            from datetime import datetime
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"Final_Report_{segment_name}_{timestamp}.txt"
+            filename = f"Final_Report_{timestamp}.txt"
+            context = planner.run(user_prompt, report_filename=filename)
+            report = context["final_report"]
             os.makedirs("outputs", exist_ok=True)
             with open(f"outputs/{filename}", "w") as f:
                 f.write(report)
-            print(f"Report written to 'outputs/{filename}'")
+            print(f"✅ Final Report saved as: outputs/{filename}")
+            print("\n==== Run Complete ====\n")
+            sys.stdout.flush()
     except KeyboardInterrupt:
         print("\nExiting...")
         sys.exit(0)

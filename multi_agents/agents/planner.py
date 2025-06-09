@@ -8,6 +8,7 @@ Web Crawler is NOT used; only RAG retrieval from local docs is performed.
 from typing import Dict, Any, Optional
 from .market_agents import IoTVerticalAgent, GeoSegmentationAgent, SegmentAgent, PositioningAgent
 import os
+from multi_agents.config import USE_RAG, RAG_ACTIVE_DIRECTORY
 from glob import glob
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
 import sys
@@ -65,25 +66,31 @@ class Planner:
         return wrapper
 
     def _build_rag_index(self, doc_path: str):
-        # Use absolute path for /RAG relative to project root
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-        abs_doc_path = os.path.join(project_root, doc_path)
-        # Log all PDF files found
+        # Use config toggle for RAG
+        if not USE_RAG:
+            print("RAG disabled — no retrieval performed.")
+            self._rag_documents = []
+            self._rag_index = None
+            self._rag_query_engine = None
+            return
+        # Use RAG_ACTIVE_DIRECTORY if RAG is enabled
+        abs_doc_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', RAG_ACTIVE_DIRECTORY))
+        print(f"RAG enabled — using folder: {RAG_ACTIVE_DIRECTORY}/")
+        from glob import glob
         pdf_files = glob(os.path.join(abs_doc_path, '**', '*.pdf'), recursive=True)
         print(f"RAG Index build: Found {len(pdf_files)} PDF files in {abs_doc_path}")
         for f in pdf_files:
             print(f" - {os.path.relpath(f, abs_doc_path)}")
-        # Load and index documents from the specified folder (including subfolders)
+        from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
         self._rag_documents = SimpleDirectoryReader(abs_doc_path, recursive=True).load_data()
         print(f"RAG Index built from {abs_doc_path} — {len(self._rag_documents)} documents indexed.")
         self._rag_index = VectorStoreIndex.from_documents(self._rag_documents)
         self._rag_query_engine = self._rag_index.as_query_engine()
 
     def get_rag_context(self, query: str) -> str:
-        """
-        Retrieve relevant context from the LlamaIndex index for a given query.
-        Returns a string with the top 3 results concatenated.
-        """
+        if not USE_RAG:
+            print("RAG disabled for this run — agent will use prior context + user prompt only.")
+            return ""
         rag_results = self._rag_query_engine.query(query)
         if hasattr(rag_results, 'response'):
             # LlamaIndex v0.10+ returns a response object
@@ -95,7 +102,28 @@ class Planner:
             return "\n\n".join(str(r) for r in list(rag_results)[:3])
         return ""
 
-    def run(self, user_prompt: str) -> Dict[str, Any]:
+    @staticmethod
+    def build_geo_filtered_query(original_query: str, segment_geo: str, segment_vertical: str) -> str:
+        """
+        Returns a geo-filtered query string for get_rag_context().
+        The prefix is:
+        "Context: This query is about [segment_vertical] in [segment_geo] only. Exclude information about other geographies (e.g. Finland, Sweden, or any country not equal to [segment_geo]). "
+        The rest of the query is then appended.
+        """
+        prefix = (
+            f"Context: This query is about {segment_vertical} in {segment_geo} only. "
+            f"Exclude information about other geographies (e.g. Finland, Sweden, or any country not equal to {segment_geo}). "
+        )
+        return prefix + original_query
+
+    def _get_contextual_rag_query(self, base_query: str, user_prompt: str) -> str:
+        # Add geo-filtering context hint to the query
+        geo_hint = f"Context: This query is about the {self.region} {self.vertical_name} IoT market only. Exclude information about other countries. "
+        return geo_hint + base_query + f" | User prompt: {user_prompt}"
+
+    def run(self, user_prompt: str, report_filename: str = None) -> Dict[str, Any]:
+        import time
+        start_time = time.time()
         # Read private company capabilities if available
         company_capabilities_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'RAG', 'Company_Information', 'company_capabilities.txt'))
         company_capabilities = ""
@@ -107,7 +135,8 @@ class Planner:
             print("No company_capabilities.txt found in /RAG/company_information/")
 
         # Step 1: IoT Vertical Agent
-        vertical_query = f"Key IoT applications, trends, and challenges in {self.vertical_name}"
+        vertical_query = self._get_contextual_rag_query(
+            f"Key IoT applications, trends, and challenges in {self.vertical_name}", user_prompt)
         vertical_rag = self.get_rag_context(vertical_query)
         vertical_result = self.agents['vertical'].run(
             user_prompt=user_prompt,
@@ -118,7 +147,11 @@ class Planner:
         self.context['vertical_result'] = vertical_result
 
         # Step 2: Geo Segmentation Agent
-        geo_query = f"IoT market size, growth, competition, regulations in {self.region} for {self.vertical_name}"
+        geo_query = self.build_geo_filtered_query(
+            f"IoT market size, growth, competition, regulations in {self.region} for {self.vertical_name}",
+            self.vertical_name,
+            self.region
+        )
         geo_rag = self.get_rag_context(geo_query)
         geo_result = self.agents['geo'].run(
             user_prompt=user_prompt,
@@ -130,7 +163,8 @@ class Planner:
         self.context['geo_result'] = geo_result
 
         # Step 3: Segment Agent
-        segment_query = f"Strategic market segments for IoT in {self.region} for {self.vertical_name}, considering previous findings"
+        segment_query = self._get_contextual_rag_query(
+            f"Strategic market segments for IoT in {self.region} for {self.vertical_name}, considering previous findings", user_prompt)
         segment_rag = self.get_rag_context(segment_query)
         segment_result = self.agents['segment'].run(
             user_prompt=user_prompt,
@@ -143,7 +177,8 @@ class Planner:
         self.context['segment_result'] = segment_result
 
         # Step 4: Positioning Agent
-        positioning_query = f"Optimal positioning strategies for IoT in {self.region} for {self.vertical_name}, considering segment characteristics"
+        positioning_query = self._get_contextual_rag_query(
+            f"Optimal positioning strategies for IoT in {self.region} for {self.vertical_name}, considering segment characteristics", user_prompt)
         positioning_rag = self.get_rag_context(positioning_query)
         positioning_result = self.agents['positioning'].run(
             user_prompt=user_prompt,
@@ -168,6 +203,16 @@ class Planner:
         # Assemble Final Report
         final_report = self._assemble_report(user_prompt)
         self.context['final_report'] = final_report
+
+        # Run verification summary
+        elapsed = time.time() - start_time
+        print("\n✅ All 4 agents completed.")
+        print(f"Token usage summary: {self.total_input_tokens + self.total_output_tokens} tokens (input: {self.total_input_tokens}, output: {self.total_output_tokens})")
+        if report_filename:
+            print(f"Final Report filename: {report_filename}")
+        print(f"Time taken: {elapsed:.1f} seconds")
+        print("\n--- End of Run Verification ---\n")
+        sys.stdout.flush()
         return self.context
 
     def _assemble_report(self, user_prompt: str) -> str:
