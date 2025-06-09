@@ -7,6 +7,8 @@ Web Crawler is NOT used; only RAG retrieval from local docs is performed.
 """
 from typing import Dict, Any, Optional
 from .market_agents import IoTVerticalAgent, GeoSegmentationAgent, SegmentAgent, PositioningAgent
+import os
+from glob import glob
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
 import sys
 from datetime import datetime
@@ -19,7 +21,7 @@ GPT4O_OUTPUT_EUR_PER_1M = 13.80
 COST_LIMIT_EUR = 20.0
 
 class Planner:
-    def __init__(self, llm_client, vertical_name: str, region: str, system_architecture: Optional[str] = None, doc_path: str = "./my-docs"):
+    def __init__(self, llm_client, vertical_name: str, region: str, system_architecture: Optional[str] = None, doc_path: str = "../RAG"):
         self.llm_client = llm_client
         self.vertical_name = vertical_name
         self.region = region
@@ -31,7 +33,6 @@ class Planner:
             'segment': SegmentAgent(self._llm_with_token_logging("Segment Agent")),
             'positioning': PositioningAgent(self._llm_with_token_logging("Positioning Agent"))
         }
-        # Build LlamaIndex index once
         self._build_rag_index(doc_path)
         self.total_input_tokens = 0
         self.total_output_tokens = 0
@@ -64,8 +65,16 @@ class Planner:
         return wrapper
 
     def _build_rag_index(self, doc_path: str):
-        # Load and index documents from the specified folder
-        self._rag_documents = SimpleDirectoryReader(doc_path).load_data()
+        # Use absolute path for /RAG relative to this file
+        abs_doc_path = os.path.abspath(os.path.join(os.path.dirname(__file__), doc_path))
+        # Log all PDF files found
+        pdf_files = glob(os.path.join(abs_doc_path, '**', '*.pdf'), recursive=True)
+        print(f"RAG Index build: Found {len(pdf_files)} PDF files in {abs_doc_path}")
+        for f in pdf_files:
+            print(f" - {os.path.relpath(f, abs_doc_path)}")
+        # Load and index documents from the specified folder (including subfolders)
+        self._rag_documents = SimpleDirectoryReader(abs_doc_path, recursive=True).load_data()
+        print(f"RAG Index built from {abs_doc_path} — {len(self._rag_documents)} documents indexed.")
         self._rag_index = VectorStoreIndex.from_documents(self._rag_documents)
         self._rag_query_engine = self._rag_index.as_query_engine()
 
