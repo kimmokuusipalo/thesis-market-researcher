@@ -109,50 +109,46 @@ class PositioningAgent:
         self.llm_client = llm_client
         self.prompt_template = (
             """
-# Strategic Positioning
-Role: IoT Strategic Positioning Advisor.
-
-Task: Recommend an optimal market positioning strategy for IoT vendors based on the provided segment analysis and IoT system architecture considerations.
-
-Context:
-You will receive:
-- The user prompt
-- IoT Vertical Agent output (vertical characteristics and trends)
-- Geo Segmentation Agent output (geography-specific market dynamics)
-- Segment Agent output (structured market variables)
-- RAG context (retrieved high-quality documents)
-
-Instructions:
-Using the provided context, recommend an optimal positioning strategy for IoT vendors in the given geography and IoT vertical.
-
-Your positioning recommendation must explicitly reference the following variables (derived from the Segment Agent output and RAG context):
-
-- Market size and growth rate
-- Profitability potential
-- Regulatory requirements (certifications, standards, data privacy laws)
-- Competitive intensity (market concentration, number of players)
-- Digital maturity of customers (PoC readiness, full-scale adoption potential)
-- Customer consolidation (types of buyers, complexity of buying centers)
-- Technological readiness (existing IoT use, integration capabilities, cloud readiness)
-
-Also explicitly consider IoT system architecture positioning dimensions based on Wortmann & Flüchter (2015):
-- Device Layer (hardware provider)
-- Connectivity / Middleware Layer
-- Platform / Cloud Layer
-- Multi-layer (end-to-end) positioning
-
-Present a clear and well-justified positioning recommendation, structured under the above variables + IoT system layer recommendation.
-
-If any variable lacks sufficient information, state so explicitly.
-
-Remember: The following data is synthetic and generated for illustrative purposes only.
-"""
+# Strategic Positioning\n"
+Role: IoT Strategic Positioning Advisor.\n\n"
+Task: Recommend an optimal market positioning strategy for IoT vendors based on the provided segment analysis, market variables, and private company capabilities.\n\n"
+Context:\n\n"
+You will receive:\n"
+- The user prompt\n"
+- IoT Vertical Agent output\n"
+- Geo Segmentation Agent output\n"
+- Segment Agent output (market variable explanations + scores)\n"
+- RAG context (retrieved high-quality documents)\n"
+- Private company capability description (not to be included in report)\n\n"
+Instructions:\n\n"
+1. Evaluate each of the following market variables:\n"
+    - Market size and growth rate\n"
+    - Profitability potential\n"
+    - Regulatory requirements\n"
+    - Competitive intensity\n"
+    - Digital maturity of customers\n"
+    - Customer consolidation\n"
+    - Technological readiness\n\n"
+2. Based on the Segment Agent output and private capabilities:\n"
+    - Recommend the most appropriate IoT system positioning layer:\n"
+        - Device Layer\n"
+        - Middleware Layer\n"
+        - Platform / Cloud Layer\n"
+        - Multi-layer (end-to-end)\n\n"
+3. Provide justification for your recommendation.\n"
+    - Reference market variables\n"
+    - Adjust for private company constraints (but do not disclose them)\n\n"
+4. Ensure your recommendation is actionable and concise.\n\n"
+5. Begin your output with the disclaimer:\n"
+"The following data is synthetic and generated for illustrative purposes only."\n\n"
+Remember: This report is public. Do not disclose or reference the private company input directly.\n"""
         )
 
-    def run(self, user_prompt: str, prior_context: Dict, rag_context: str = "", system_architecture: Optional[str] = None) -> str:
+    def run(self, user_prompt: str, prior_context: Dict, rag_context: str = "", system_architecture: Optional[str] = None, company_capabilities: Optional[str] = None) -> str:
         vertical_result = prior_context.get("vertical_result", "")
         geo_result = prior_context.get("geo_result", "")
         segment_result = prior_context.get("segment_result", "")
+        # Compose the prompt, including private company capabilities as a non-output context
         prompt = (
             f"{self.prompt_template}\n"
             f"User Prompt: {user_prompt}\n\n"
@@ -161,6 +157,8 @@ Remember: The following data is synthetic and generated for illustrative purpose
             f"[Segment Synthesis Result]\n{segment_result}\n\n"
             f"[RAG Context]\n{rag_context}\n"
         )
+        if company_capabilities:
+            prompt += f"\n[Private Company Capabilities] (for LLM context only, do not include in output):\n{company_capabilities}\n"
         if system_architecture:
             prompt += f"\nSystem Architecture: {system_architecture}\n"
         result = self.llm_client(prompt)

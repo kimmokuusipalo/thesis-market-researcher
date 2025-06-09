@@ -96,6 +96,13 @@ class Planner:
         return ""
 
     def run(self, user_prompt: str) -> Dict[str, Any]:
+        # Read private company capabilities if available
+        company_capabilities_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'company_capabilities.txt'))
+        company_capabilities = ""
+        if os.path.exists(company_capabilities_path):
+            with open(company_capabilities_path, 'r') as f:
+                company_capabilities = f.read().strip()
+
         # Step 1: IoT Vertical Agent
         vertical_query = f"Key IoT applications, trends, and challenges in {self.vertical_name}"
         vertical_rag = self.get_rag_context(vertical_query)
@@ -143,7 +150,8 @@ class Planner:
                 'segment_result': segment_result
             },
             rag_context=positioning_rag,
-            system_architecture=self.system_architecture
+            system_architecture=self.system_architecture,
+            company_capabilities=company_capabilities
         )
         self.context['positioning_result'] = positioning_result
 
