@@ -120,26 +120,14 @@ const Hero: FC<THeroProps> = ({
             variants={fadeInUp}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            <div className="mb-2 xs:mb-3 sm:mb-1 md:mb-0">Say Goodbye to</div>
-            <span
-              style={{
-                backgroundImage: 'linear-gradient(to right, #0cdbb6, #1fd0f0, #06dbee)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                display: 'block',
-                lineHeight: '1.2',
-                paddingBottom: '0.1em'
-              }}
-            >
-              Hours of Research
-            </span>
+            <div className="mb-2 xs:mb-3 sm:mb-1 md:mb-0">AI summarize IoT segments</div>
           </motion.h1>
           <motion.h2 
             className="text-base sm:text-xl font-light text-center px-4 mb-6 text-gray-300 max-w-2xl"
             variants={fadeInUp}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
-            Say Hello to GPT Researcher, your AI partner for instant insights and comprehensive research
+            A market entry analysis tool based on ResearchGPT
           </motion.h2>
           
           {/* Powered by badge */}
@@ -297,17 +285,17 @@ type suggestionType = {
 const suggestions: suggestionType[] = [
   {
     id: 1,
-    name: "Stock analysis on ",
+    name: "Analyze IoT for district heating in Finland",
     icon: "/img/stock2.svg",
   },
   {
     id: 2,
-    name: "Help me plan an adventure to ",
+    name: "Smart waste management market in UAE",
     icon: "/img/hiker.svg",
   },
   {
     id: 3,
-    name: "What are the latest news on ",
+    name: "IoT for mining operations in Canada",
     icon: "/img/news.svg",
   },
 ];

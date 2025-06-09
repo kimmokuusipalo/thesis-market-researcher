@@ -21,7 +21,7 @@ GPT4O_OUTPUT_EUR_PER_1M = 13.80
 COST_LIMIT_EUR = 20.0
 
 class Planner:
-    def __init__(self, llm_client, vertical_name: str, region: str, system_architecture: Optional[str] = None, doc_path: str = "../RAG"):
+    def __init__(self, llm_client, vertical_name: str, region: str, system_architecture: Optional[str] = None, doc_path: str = "RAG"):
         self.llm_client = llm_client
         self.vertical_name = vertical_name
         self.region = region
@@ -65,8 +65,9 @@ class Planner:
         return wrapper
 
     def _build_rag_index(self, doc_path: str):
-        # Use absolute path for /RAG relative to this file
-        abs_doc_path = os.path.abspath(os.path.join(os.path.dirname(__file__), doc_path))
+        # Use absolute path for /RAG relative to project root
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        abs_doc_path = os.path.join(project_root, doc_path)
         # Log all PDF files found
         pdf_files = glob(os.path.join(abs_doc_path, '**', '*.pdf'), recursive=True)
         print(f"RAG Index build: Found {len(pdf_files)} PDF files in {abs_doc_path}")

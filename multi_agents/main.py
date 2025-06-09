@@ -61,12 +61,20 @@ async def main():
     system_architecture = os.environ.get("SYSTEM_ARCHITECTURE") or "Cloud Platform"
     openai_api_key = os.getenv("OPENAI_API_KEY")
     client = OpenAI(api_key=openai_api_key)
-    def llm_client(prompt):
+    def llm_client(prompt, return_usage=False, **kwargs):
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[{"role": "system", "content": prompt}]
         )
-        return response.choices[0].message.content
+        text = response.choices[0].message.content
+        usage = getattr(response, "usage", None)
+        if return_usage and usage:
+            return text, {
+                "prompt_tokens": usage.prompt_tokens,
+                "completion_tokens": usage.completion_tokens,
+                "total_tokens": usage.total_tokens
+            }
+        return text
     planner = Planner(llm_client, vertical_name, region, system_architecture)
     context = planner.run(query)
     report = context["final_report"]
