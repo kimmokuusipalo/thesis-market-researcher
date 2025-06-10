@@ -35,7 +35,7 @@ class IoTVerticalAgent:
 class GeoSegmentationAgent:
     def __init__(self, llm_client):
         self.llm_client = llm_client
-        self.prompt_template = (
+        self.prompt_template_single = (
             "# Geo Segmentation Analysis\n"
             "Role: IoT Market Analyst for {region}.\n"
             "Task: Analyze the IoT market landscape in {region} for {vertical_name}.\n"
@@ -44,15 +44,56 @@ class GeoSegmentationAgent:
             "- List regulatory factors, competitor presence, and key challenges.\n"
             "- Mark data as synthetic."
         )
+        self.prompt_template_multi = (
+            """
+# Multi-Geo Segmentation Analysis
+This Geo Segmentation Agent is part of a multi-agent system for GenAI-driven market segmentation and positioning in IoT markets, implemented for a Master's thesis using the Design Science Research methodology.
 
-    def run(self, user_prompt: str, prior_context: Dict, rag_context: str = "", region: str = "", vertical_name: str = "") -> str:
-        vertical_result = prior_context.get("vertical_result", "")
-        prompt = (
-            f"{self.prompt_template.format(region=region, vertical_name=vertical_name)}\n\n"
-            f"User Prompt: {user_prompt}\n\n"
-            f"[IoT Vertical Result]\n{vertical_result}\n\n"
-            f"[RAG Context]\n{rag_context}\n"
+Architecture context:
+- The system consists of a Planner coordinating five agents: IoT Vertical Agent, Geo Segmentation Agent, Segment Agent, Positioning Agent, Segment Ranking Agent.
+- The Geo Segmentation Agent supports two modes:
+    - Single-geo mode (default)
+    - Multi-geo mode (triggered if user_prompt requests 'best segments', 'compare markets', or similar).
+- Multi-geo mode allows the agent to consider **any geography**, not limited to what is present in the RAG index.
+
+Purpose of this agent:
+- In single-geo mode:
+    - Analyze the specified geography in depth.
+- In multi-geo mode:
+    - Identify and rank promising geographies for the given IoT vertical.
+    - Use both retrieved RAG context where available AND LLM world knowledge.
+    - Do not limit to geographies covered in RAG — include any relevant markets.
+    - The agent should also consider continent-level opportunities if relevant (e.g. 'North America', 'Western Europe').
+
+Instructions:
+- For each geography:
+    - Geography name
+    - Market size and growth
+    - Regulatory factors
+    - Competitor presence
+    - Key challenges
+    - Market potential (1–5)
+    - Summary recommendation (Go / Further Analyze / Not Recommended)
+- Mark data as synthetic.
+"""
         )
+
+    def run(self, user_prompt: str, prior_context: Dict, rag_context: str = "", region: str = "", vertical_name: str = "", geo_mode: str = "single") -> str:
+        vertical_result = prior_context.get("vertical_result", "")
+        if geo_mode == "multi":
+            prompt = (
+                f"{self.prompt_template_multi.format(vertical_name=vertical_name)}\n\n"
+                f"User Prompt: {user_prompt}\n\n"
+                f"[IoT Vertical Result]\n{vertical_result}\n\n"
+                f"[RAG Context]\n{rag_context}\n"
+            )
+        else:
+            prompt = (
+                f"{self.prompt_template_single.format(region=region, vertical_name=vertical_name)}\n\n"
+                f"User Prompt: {user_prompt}\n\n"
+                f"[IoT Vertical Result]\n{vertical_result}\n\n"
+                f"[RAG Context]\n{rag_context}\n"
+            )
         result = self.llm_client(prompt)
         return f"{DISCLAIMER}\n\n{result.strip()}"
 

@@ -79,6 +79,13 @@ def extract_vertical_and_region(user_prompt: str):
     # fallback: use defaults
     return "Smart Cities", "Finland"
 
+def detect_geo_mode(user_prompt: str) -> str:
+    multi_keywords = ["best segments", "compare", "multiple markets", "across geographies", "all geographies", "all regions", "all countries"]
+    for kw in multi_keywords:
+        if kw in user_prompt.lower():
+            return "multi"
+    return "single"
+
 async def main():
     import os
     from openai import OpenAI
@@ -123,10 +130,11 @@ async def main():
                 print("Exiting...")
                 sys.exit(0)
             vertical_name, region = extract_vertical_and_region(user_prompt)
+            geo_mode = detect_geo_mode(user_prompt)
             system_architecture = os.environ.get("SYSTEM_ARCHITECTURE") or "Cloud Platform"
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"Final_Report_{timestamp}.txt"
-            planner = Planner(llm_client, vertical_name, region, system_architecture)
+            planner = Planner(llm_client, vertical_name, region, system_architecture, geo_mode=geo_mode)
             context = planner.run(user_prompt, report_filename=filename)
             report = context["final_report"]
             os.makedirs("outputs", exist_ok=True)

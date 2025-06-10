@@ -22,11 +22,12 @@ GPT4O_OUTPUT_EUR_PER_1M = 13.80
 COST_LIMIT_EUR = 20.0
 
 class Planner:
-    def __init__(self, llm_client, vertical_name: str, region: str, system_architecture: Optional[str] = None, doc_path: str = "RAG"):
+    def __init__(self, llm_client, vertical_name: str, region: str, system_architecture: Optional[str] = None, doc_path: str = "RAG", geo_mode: str = "single"):
         self.llm_client = llm_client
         self.vertical_name = vertical_name
         self.region = region
         self.system_architecture = system_architecture
+        self.geo_mode = geo_mode
         self.context: Dict[str, Any] = {}
         self.agents = {
             'vertical': IoTVerticalAgent(self._llm_with_token_logging("IoT Vertical Agent")),
@@ -152,19 +153,35 @@ class Planner:
         self.context['vertical_result'] = vertical_result
 
         # Step 2: Geo Segmentation Agent
-        geo_query = self.build_geo_filtered_query(
-            f"IoT market size, growth, competition, regulations in {self.region} for {self.vertical_name}",
-            self.vertical_name,
-            self.region
-        )
-        geo_rag = self.get_rag_context(geo_query)
-        geo_result = self.agents['geo'].run(
-            user_prompt=user_prompt,
-            prior_context={'vertical_result': vertical_result},
-            rag_context=geo_rag,
-            region=self.region,
-            vertical_name=self.vertical_name
-        )
+        if self.geo_mode == "multi":
+            geo_query = (
+                f"Identify and rank possible geographies for {self.vertical_name} based on available RAG data and market variables. "
+                f"Do not restrict to a single geography. Include any geography for which market data is available or inferable."
+            )
+            geo_rag = self.get_rag_context(geo_query)
+            geo_result = self.agents['geo'].run(
+                user_prompt=user_prompt,
+                prior_context={'vertical_result': vertical_result},
+                rag_context=geo_rag,
+                region="ALL",
+                vertical_name=self.vertical_name,
+                geo_mode="multi"
+            )
+        else:
+            geo_query = self.build_geo_filtered_query(
+                f"IoT market size, growth, competition, regulations in {self.region} for {self.vertical_name}",
+                self.vertical_name,
+                self.region
+            )
+            geo_rag = self.get_rag_context(geo_query)
+            geo_result = self.agents['geo'].run(
+                user_prompt=user_prompt,
+                prior_context={'vertical_result': vertical_result},
+                rag_context=geo_rag,
+                region=self.region,
+                vertical_name=self.vertical_name,
+                geo_mode="single"
+            )
         self.context['geo_result'] = geo_result
 
         # Step 3: Segment Agent
