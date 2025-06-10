@@ -227,60 +227,13 @@ class SegmentRankingAgent:
 # Segment Ranking Table
 This Segment Ranking Agent is part of a multi-agent system for GenAI-driven market segmentation and positioning in IoT markets, implemented for a Master's thesis using the Design Science Research methodology.
 
-Architecture context:
-- The system consists of a Planner coordinating five agents: IoT Vertical Agent, Geo Segmentation Agent, Segment Agent, Positioning Agent, and Segment Ranking Agent.
-- The Segment Ranking Agent runs **only if**:
-    - company_capabilities.txt is present, AND
-    - Segment Agent output includes multiple segments.
-
-Purpose of this agent:
-- The Segment Ranking Agent synthesizes the Segment Agent and Positioning Agent outputs, and evaluates the segments against company capabilities.
-- It produces an actionable Segment Ranking table to support IoT market entry decisions.
-- It provides this table in the Final Report and exports it as an Excel file for decision workshops.
-
-Reason for this structure:
-- Supports realistic strategy decision-making.
-- Enables prioritization of segments based on capability fit and market attractiveness.
-- Demonstrates advanced agentic synthesis in the thesis artefact.
-
 Instructions:
-For each segment provided in the Segment Agent output:
-- Evaluate the segment against the company's capabilities.
-- For each market variable, assign a rating from 1 (very poor fit / high risk) to 5 (excellent fit / opportunity).
-- Provide a brief justification for each rating.
-- Provide an ultimate recommendation for the segment:
-    - Go
-    - Further Analyze
-    - Not Recommended
-
-Market Variables to Rate:
-1. Market Potential
-2. Competitive Intensity
-3. Regulatory Complexity
-4. Technological Readiness
-5. Digital Maturity of Customers
-6. Fit with Company Capabilities (based on company_capabilities.txt)
-
-Output Format:
-For each segment:
-
-Segment Name: [Segment Name]
-
-| Variable                      | Rating (1–5) | Justification |
-|-------------------------------|--------------|---------------|
-| Market Potential              |              |               |
-| Competitive Intensity         |              |               |
-| Regulatory Complexity         |              |               |
-| Technological Readiness       |              |               |
-| Digital Maturity of Customers |              |               |
-| Fit with Company Capabilities |              |               |
-
-Ultimate Recommendation: [Go / Further Analyze / Not Recommended]
-
-Final Notes:
-- Be concise and actionable.
-- Focus on supporting strategic decision making.
-- The same table will be exported to Excel — structure your output clearly.
+- For each segment, output a single unified table (one row per segment) with the following columns:
+| Segment Name | Market Potential (1–5) | Justification for Market Potential | Competitive Intensity (1–5) | Justification for Competitive Intensity | Regulatory Complexity (1–5) | Justification for Regulatory Complexity | Technological Readiness (1–5) | Justification for Technological Readiness | Digital Maturity of Customers (1–5) | Justification for Digital Maturity of Customers | Fit with Company Capabilities (1–5) | Justification for Fit with Company Capabilities | Ultimate Recommendation |
+- Fill in all columns for each segment, using the Segment Agent, Positioning Agent, and Company Capabilities context.
+- Output the table in markdown format, with column headers and one row per segment.
+- The same table will be exported to Excel for management decision workshops.
+- Be concise and actionable. Structure your output clearly.
 
 Remember: The following data is synthetic and generated for illustrative purposes only.
 """

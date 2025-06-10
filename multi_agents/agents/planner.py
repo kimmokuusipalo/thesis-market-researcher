@@ -226,18 +226,21 @@ class Planner:
             self.context['segment_ranking_md'] = segment_ranking_md
             # Export to Excel
             # Parse markdown table to DataFrame
-            match = re.search(r"\|(.|\n)*?\|\n", segment_ranking_md)
-            if match:
-                table_md = segment_ranking_md[match.start():]
-                try:
-                    df = pd.read_csv(pd.compat.StringIO(table_md.replace('|', ',')), skipinitialspace=True)
-                except Exception:
-                    # Fallback: use tabulate if available
-                    from io import StringIO
-                    import csv
-                    lines = [l.strip() for l in table_md.strip().split('\n') if l.strip() and l.strip().startswith('|')]
-                    rows = [l.strip('|').split('|') for l in lines]
-                    df = pd.DataFrame(rows[1:], columns=[c.strip() for c in rows[0]])
+            import re
+            import pandas as pd
+            # Find the markdown table (starts with | and has at least 2 lines)
+            lines = segment_ranking_md.splitlines()
+            table_lines = [l for l in lines if l.strip().startswith('|')]
+            if table_lines:
+                # Join lines and use pandas.read_csv with sep='|', skip first/last empty columns
+                table_str = '\n'.join(table_lines)
+                # Remove leading/trailing pipes and whitespace
+                table_str = '\n'.join([l.strip().strip('|') for l in table_lines])
+                from io import StringIO
+                df = pd.read_csv(StringIO(table_str), sep='|')
+                # Clean up column names and whitespace
+                df.columns = [c.strip() for c in df.columns]
+                df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 excel_filename = f"Segment_Ranking_{self.region}_{timestamp}.xlsx"
                 excel_path = os.path.join("outputs", excel_filename)
