@@ -47,34 +47,44 @@ class GeoSegmentationAgent:
         self.prompt_template_multi = (
             """
 # Multi-Geo Segmentation Analysis
-This Geo Segmentation Agent is part of a multi-agent system for GenAI-driven market segmentation and positioning in IoT markets, implemented for a Master's thesis using the Design Science Research methodology.
+Role: IoT Market Geography Analyst
 
-Architecture context:
-- The system consists of a Planner coordinating five agents: IoT Vertical Agent, Geo Segmentation Agent, Segment Agent, Positioning Agent, Segment Ranking Agent.
-- The Geo Segmentation Agent supports two modes:
-    - Single-geo mode (default)
-    - Multi-geo mode (triggered if user_prompt requests 'best segments', 'compare markets', or similar).
-- Multi-geo mode allows the agent to consider **any geography**, not limited to what is present in the RAG index.
+Task: Identify and rank promising geographies for the given IoT vertical, based on available RAG context and general market knowledge.
 
-Purpose of this agent:
-- In single-geo mode:
-    - Analyze the specified geography in depth.
-- In multi-geo mode:
-    - Identify and rank promising geographies for the given IoT vertical.
-    - Use both retrieved RAG context where available AND LLM world knowledge.
-    - Do not limit to geographies covered in RAG — include any relevant markets.
-    - The agent should also consider continent-level opportunities if relevant (e.g. 'North America', 'Western Europe').
+Context:
+You will receive:
+- The user prompt
+- IoT Vertical Agent output
+- RAG context (if available)
 
 Instructions:
-- For each geography:
-    - Geography name
-    - Market size and growth
-    - Regulatory factors
-    - Competitor presence
-    - Key challenges
-    - Market potential (1–5)
-    - Summary recommendation (Go / Further Analyze / Not Recommended)
-- Mark data as synthetic.
+- You must analyze at least 5 different countries (minimum 5).
+- You may analyze up to 7 countries if appropriate.
+- Do not include continent-level markets (e.g. 'North America', 'Western Europe', etc.) — use only country-level geographies.
+- Use both retrieved RAG context AND your own world knowledge.
+- You are NOT limited to geographies present in RAG.
+- If RAG data is missing for a country, infer based on general IoT and Smart Waste trends — this is acceptable and expected.
+- Prioritize markets that differ in market potential, regulatory complexity, competitive intensity, or strategic relevance.
+- Prioritize market diversity.
+
+For each country, provide the following structured output:
+
+### Geography: [Country Name]
+- Market Size and Growth: [Qualitative assessment]
+- Regulatory Factors: [Summary of relevant factors]
+- Competitor Presence: [Summary of key players or competitive intensity]
+- Key Challenges: [Top 2–3 challenges]
+- Market Potential: [Rating 1–5]
+- Summary Recommendation: [Go / Further Analyze / Not Recommended]
+
+Important:
+- If RAG data is available for a country, use it.
+- If no RAG data is available, rely on your knowledge to provide an estimate.
+- Be clear when you are inferring information vs. using retrieved data.
+
+- The Segment Agent will use your output to generate segments per country.
+
+Remember: The following data is synthetic and generated for illustrative purposes only.
 """
         )
 
@@ -82,7 +92,7 @@ Instructions:
         vertical_result = prior_context.get("vertical_result", "")
         if geo_mode == "multi":
             prompt = (
-                f"{self.prompt_template_multi.format(vertical_name=vertical_name)}\n\n"
+                f"{self.prompt_template_multi}\n\n"
                 f"User Prompt: {user_prompt}\n\n"
                 f"[IoT Vertical Result]\n{vertical_result}\n\n"
                 f"[RAG Context]\n{rag_context}\n"
