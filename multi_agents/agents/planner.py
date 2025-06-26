@@ -74,9 +74,14 @@ class Planner:
             self._rag_index = None
             self._rag_query_engine = None
             return
-        # Use RAG_ACTIVE_DIRECTORY if RAG is enabled
-        abs_doc_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', RAG_ACTIVE_DIRECTORY))
-        print(f"RAG enabled — using folder: {RAG_ACTIVE_DIRECTORY}/")
+        
+        # Use custom doc_path if provided, otherwise use RAG_ACTIVE_DIRECTORY from config
+        if doc_path == "RAG":  # Default parameter value means use config
+            abs_doc_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', RAG_ACTIVE_DIRECTORY))
+            print(f"RAG enabled — using folder: {RAG_ACTIVE_DIRECTORY}/")
+        else:  # Custom path provided (e.g., for testing)
+            abs_doc_path = os.path.abspath(doc_path)
+            print(f"RAG enabled — using custom folder: {abs_doc_path}")
         
         # Check if directory exists and has any files
         if not os.path.exists(abs_doc_path):
@@ -352,7 +357,7 @@ class Planner:
                 df = pd.read_csv(StringIO(table_str), sep='|')
                 # Clean up column names and whitespace
                 df.columns = [c.strip() for c in df.columns]
-                df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+                df = df.map(lambda x: x.strip() if isinstance(x, str) else x)
                 
                 # Generate filename with timestamp
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
