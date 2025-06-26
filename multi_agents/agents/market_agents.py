@@ -75,7 +75,7 @@ Instructions:
 - Do not include continent-level markets (e.g. 'North America', 'Western Europe', etc.) — use only country-level geographies.
 - Use both retrieved RAG context AND your own world knowledge.
 - You are NOT limited to geographies present in RAG.
-- If RAG data is missing for a country, infer based on general IoT and Smart Waste trends — this is acceptable and expected.
+- If RAG data is missing for a country, infer based on general IoT trends for the given vertical — this is acceptable and expected.
 - Prioritize markets that differ in market potential, regulatory complexity, competitive intensity, or strategic relevance.
 - Prioritize market diversity.
 
@@ -136,6 +136,13 @@ Context:
     - Geo Segmentation Agent output (geography-specific market dynamics)
     - RAG context (retrieved high-quality documents)
 
+IoT Technology Stack Context:
+When analyzing segments, consider how different technology positioning affects market opportunities:
+- Device Layer: Hardware components, sensors, embedded software
+- Connectivity Layer: Network communication and data transmission
+- IoT Cloud Layer: Platforms, analytics, application development
+- Cross-cutting Systems: Security, business integration, external data sources
+
 Instructions:
 - Using the provided context, analyze and define one or more actionable market segments in the given geography and IoT vertical.
 - For each segment, explicitly evaluate the following variables:
@@ -147,6 +154,11 @@ Instructions:
     5. Digital maturity: Organization readiness of segment to adopt and scale digital IoT systems
     6. Customer consolidation: Centralization of purchasing decisions affecting sales cycle complexity
     7. Technological readiness: Business systems, external information sources, and existing IoT systems integrability
+
+- For each segment, also consider:
+    - Which technology layers are most critical for this segment
+    - What level of ecosystem complexity customers can handle
+    - Whether customers prefer single-layer solutions or integrated offerings
 
 - Present each segment clearly, structured under these variable headings.
 - If any variable lacks sufficient information, state so explicitly.
@@ -184,6 +196,23 @@ You will receive:\n"
 - Segment Agent output (market variable explanations + scores)\n"
 - RAG context (retrieved high-quality documents)\n"
 - Private company capability description (not to be included in report)\n\n"
+IoT System Architecture Framework:\n"
+This layered architecture illustrates technological positioning options for IoT vendors:\n\n"
+1. Device Layer ("Thing"):\n"
+   - Thing hardware: Core physical components (sensors, boards)\n"
+   - IoT components: Embedded processors, sensors, communication ports\n"
+   - Thing software: Embedded software managing device functionality\n\n"
+2. Connectivity Layer:\n"
+   - Network communication: Communication protocols for data transmission\n\n"
+3. IoT Cloud Layer:\n"
+   - Thing communication and management: Software managing connected devices\n"
+   - Application platform: Development environments for IoT applications\n"
+   - Analytics and data management: Processing time-series and sensor data\n"
+   - Process management and IoT applications: Task execution and coordination\n\n"
+Cross-cutting Systems (spanning all layers):\n"
+   - Identity and security: Access control and secure operations\n"
+   - Integration with business systems: Connection to ERP, CRM, PLM systems\n"
+   - External information sources: Third-party data provider connections\n\n"
 Instructions:\n\n"
 1. Evaluate each of the following market variables (from the Segment Agent):\n"
     - Market size and growth rate: Overall market volume and projected growth within the selected vertical–geography pair\n"
@@ -193,16 +222,21 @@ Instructions:\n\n"
     - Digital maturity: Organization readiness of segment to adopt and scale digital IoT systems\n"
     - Customer consolidation: Centralization of purchasing decisions affecting sales cycle complexity\n"
     - Technological readiness: Business systems, external information sources, and existing IoT systems integrability\n\n"
-2. Based strictly on the Segment Agent output and market variable scores, recommend one of the following IoT system architecture positioning layers:\n"
-    - Device Layer\n"
-    - Middleware Layer\n"
-    - Platform / Cloud Layer\n"
-    - Multi-layer (end-to-end)\n\n"
-3. Justify your recommendation using only the market variable scores and explanations.\n"
-4. Do NOT recommend sales actions, partnerships, or general go-to-market advice.\n"
-5. Do NOT suggest leveraging capabilities unless it is directly relevant to the system positioning layer.\n"
-6. Keep your output clean, technical, and focused on architecture positioning.\n"
-7. Begin your output with the disclaimer:\n"
+2. Based strictly on the Segment Agent output and market variable scores, recommend one of the following positioning strategies:\n"
+    - Device Layer: Focus on hardware components, sensors, or embedded software\n"
+    - Connectivity Layer: Focus on network communication and data transmission\n"
+    - IoT Cloud Layer: Focus on cloud platforms, analytics, or application development\n"
+    - Multi-layer (end-to-end): Full-stack positioning across multiple layers\n"
+    - Cross-cutting Systems: Focus on security, integration, or external data services\n\n"
+3. Consider how ecosystem complexity and integration needs vary by positioning:\n"
+    - Device Layer: Lower ecosystem complexity, focused partnerships\n"
+    - Cloud Layer: Higher ecosystem complexity, extensive integration needs\n"
+    - Multi-layer: Highest complexity, comprehensive ecosystem management\n\n"
+4. Justify your recommendation using only the market variable scores and explanations.\n"
+5. Do NOT recommend sales actions, partnerships, or general go-to-market advice.\n"
+6. Do NOT suggest leveraging capabilities unless it is directly relevant to the system positioning layer.\n"
+7. Keep your output clean, technical, and focused on architecture positioning.\n"
+8. Begin your output with the disclaimer:\n"
 "The following data is synthetic and generated for illustrative purposes only."\n\n"
 Remember: This report is public. Do not disclose or reference the private company input directly.\n"""
         )
@@ -246,6 +280,13 @@ You will receive:
 - Positioning Agent output
 - Company capabilities (private, not to be quoted directly)
 
+IoT Technology Stack Framework:
+Consider the company's fit across these technological positioning options:
+- Device Layer: Hardware design, embedded software, sensor technology
+- Connectivity Layer: Network protocols, communication infrastructure
+- IoT Cloud Layer: Platform development, data analytics, application services
+- Cross-cutting Systems: Security expertise, system integration, data management
+
 Instructions:
 1. For each market variable, rate from 1 (poor fit) to 5 (excellent fit) how well the company is positioned to compete, with a brief justification:
     - Market size and growth rate: Overall market volume and projected growth within the selected vertical–geography pair
@@ -255,13 +296,17 @@ Instructions:
     - Digital maturity: Organization readiness of segment to adopt and scale digital IoT systems
     - Customer consolidation: Centralization of purchasing decisions affecting sales cycle complexity
     - Technological readiness: Business systems, external information sources, and existing IoT systems integrability
-2. Provide an ultimate recommendation:
+2. Evaluate the company's technological positioning fit:
+    - Assess capabilities across device, connectivity, cloud, and cross-cutting systems
+    - Consider the company's ability to handle ecosystem complexity at the recommended layer
+    - Evaluate technical depth vs. breadth based on positioning recommendation
+3. Provide an ultimate recommendation:
     - Strongly recommended
     - Acceptable with caveats
     - Not recommended
-3. Justify your recommendation based on the company capabilities and the Positioning Agent's output.
-4. Do NOT quote or paraphrase private company input directly.
-5. Output must be concise, actionable, and confidential-friendly.
+4. Justify your recommendation based on the company capabilities and the Positioning Agent's output.
+5. Do NOT quote or paraphrase private company input directly.
+6. Output must be concise, actionable, and confidential-friendly.
 """
         )
 
