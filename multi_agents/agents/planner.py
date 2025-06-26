@@ -77,31 +77,76 @@ class Planner:
         # Use RAG_ACTIVE_DIRECTORY if RAG is enabled
         abs_doc_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', RAG_ACTIVE_DIRECTORY))
         print(f"RAG enabled — using folder: {RAG_ACTIVE_DIRECTORY}/")
+        
+        # Check if directory exists and has any files
+        if not os.path.exists(abs_doc_path):
+            print(f"RAG directory does not exist: {abs_doc_path}")
+            print("RAG will operate without document retrieval.")
+            self._rag_documents = []
+            self._rag_index = None
+            self._rag_query_engine = None
+            return
+            
         from glob import glob
         pdf_files = glob(os.path.join(abs_doc_path, '**', '*.pdf'), recursive=True)
         print(f"RAG Index build: Found {len(pdf_files)} PDF files in {abs_doc_path}")
         for f in pdf_files:
             print(f" - {os.path.relpath(f, abs_doc_path)}")
-        from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
-        self._rag_documents = SimpleDirectoryReader(abs_doc_path, recursive=True).load_data()
-        print(f"RAG Index built from {abs_doc_path} — {len(self._rag_documents)} documents indexed.")
-        self._rag_index = VectorStoreIndex.from_documents(self._rag_documents)
-        self._rag_query_engine = self._rag_index.as_query_engine()
+            
+        try:
+            from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+            # Handle empty directory gracefully
+            try:
+                self._rag_documents = SimpleDirectoryReader(abs_doc_path, recursive=True).load_data()
+            except ValueError as e:
+                if "No documents found" in str(e) or "no supported documents" in str(e):
+                    print(f"No supported documents found in {abs_doc_path}")
+                    print("RAG will operate without document retrieval.")
+                    self._rag_documents = []
+                    self._rag_index = None
+                    self._rag_query_engine = None
+                    return
+                else:
+                    raise e
+                    
+            if not self._rag_documents:
+                print("No documents loaded from RAG directory.")
+                print("RAG will operate without document retrieval.")
+                self._rag_index = None
+                self._rag_query_engine = None
+                return
+                
+            print(f"RAG Index built from {abs_doc_path} — {len(self._rag_documents)} documents indexed.")
+            self._rag_index = VectorStoreIndex.from_documents(self._rag_documents)
+            self._rag_query_engine = self._rag_index.as_query_engine()
+        except Exception as e:
+            print(f"Error building RAG index: {e}")
+            print("RAG will operate without document retrieval.")
+            self._rag_documents = []
+            self._rag_index = None
+            self._rag_query_engine = None
 
     def get_rag_context(self, query: str) -> str:
         if not USE_RAG:
             print("RAG disabled for this run — agent will use prior context + user prompt only.")
             return ""
-        rag_results = self._rag_query_engine.query(query)
-        if hasattr(rag_results, 'response'):
-            # LlamaIndex v0.10+ returns a response object
-            return rag_results.response.strip()
-        elif isinstance(rag_results, str):
-            return rag_results.strip()
-        elif hasattr(rag_results, '__iter__'):
-            # If it's a list of nodes or texts
-            return "\n\n".join(str(r) for r in list(rag_results)[:3])
-        return ""
+        if not self._rag_query_engine:
+            print("No RAG index available — agent will use prior context + user prompt only.")
+            return ""
+        try:
+            rag_results = self._rag_query_engine.query(query)
+            if hasattr(rag_results, 'response'):
+                # LlamaIndex v0.10+ returns a response object
+                return rag_results.response.strip()
+            elif isinstance(rag_results, str):
+                return rag_results.strip()
+            elif hasattr(rag_results, '__iter__'):
+                # If it's a list of nodes or texts
+                return "\n\n".join(str(r) for r in list(rag_results)[:3])
+            return ""
+        except Exception as e:
+            print(f"Error querying RAG: {e}")
+            return ""
 
     @staticmethod
     def build_geo_filtered_query(original_query: str, segment_geo: str, segment_vertical: str) -> str:
@@ -132,13 +177,30 @@ class Planner:
         company_capabilities = ""
         company_agent_should_run = os.path.exists(company_capabilities_path)
         if company_agent_should_run:
-            with open(company_capabilities_path, 'r') as f:
-                company_capabilities = f.read().strip()
-            print(f"Company capabilities context loaded from /{RAG_ACTIVE_DIRECTORY}/Company_Information/company_capabilities.txt")
-            print("[LOG] Company Agent will be run.")
+            try:
+                with open(company_capabilities_path, 'r') as f:
+                    company_capabilities = f.read().strip()
+                if company_capabilities:
+                    print(f"Company capabilities context loaded from /{RAG_ACTIVE_DIRECTORY}/Company_Information/company_capabilities.txt")
+                    print("[LOG] Company Agent will be run.")
+                else:
+                    print(f"Company capabilities file is empty: {company_capabilities_path}")
+                    print("[LOG] Company Agent will be skipped.")
+                    company_agent_should_run = False
+            except Exception as e:
+                print(f"Error reading company capabilities file: {e}")
+                print("[LOG] Company Agent will be skipped.")
+                company_agent_should_run = False
         else:
             print(f"No company_capabilities.txt found in /{RAG_ACTIVE_DIRECTORY}/Company_Information/")
             print("[LOG] Company Agent will be skipped.")
+            
+        # Also check if Company_Information directory exists at all
+        company_info_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', RAG_ACTIVE_DIRECTORY, 'Company_Information'))
+        if not os.path.exists(company_info_dir):
+            print(f"No Company_Information directory found in /{RAG_ACTIVE_DIRECTORY}/")
+            print("[LOG] Company Agent will be skipped.")
+            company_agent_should_run = False
 
         # Step 1: IoT Vertical Agent
         vertical_query = self._get_contextual_rag_query(
@@ -215,7 +277,7 @@ class Planner:
         )
         self.context['positioning_result'] = positioning_result
 
-        # Step 5: Company Agent (optional)
+        # Step 5: Company Agent (conditional)
         if company_agent_should_run:
             if 'company' not in self.agents:
                 self.agents['company'] = CompanyAgent(self._llm_with_token_logging("Company Agent"))
@@ -230,93 +292,26 @@ class Planner:
                 rag_context=company_capabilities
             )
             self.context['company_result'] = company_result
-            # Step 6: Segment Ranking Agent (optional)
-            if 'segment_ranking' not in self.agents:
-                self.agents['segment_ranking'] = SegmentRankingAgent(self._llm_with_token_logging("Segment Ranking Agent"))
-            segment_ranking_md = self.agents['segment_ranking'].run(
-                prior_context={
-                    'segment_result': segment_result,
-                    'positioning_result': positioning_result
-                },
-                company_capabilities=company_capabilities
-            )
-            self.context['segment_ranking_md'] = segment_ranking_md
-            # Export to Excel
-            # Parse markdown table to DataFrame
-            import re
-            import pandas as pd
-            # Find the markdown table (starts with | and has at least 2 lines)
-            lines = segment_ranking_md.splitlines()
-            table_lines = [l for l in lines if l.strip().startswith('|')]
-            if table_lines:
-                # Join lines and use pandas.read_csv with sep='|', skip first/last empty columns
-                table_str = '\n'.join(table_lines)
-                # Remove leading/trailing pipes and whitespace
-                table_str = '\n'.join([l.strip().strip('|') for l in table_lines])
-                from io import StringIO
-                df = pd.read_csv(StringIO(table_str), sep='|')
-                # Clean up column names and whitespace
-                df.columns = [c.strip() for c in df.columns]
-                df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                excel_filename = f"Segment_Ranking_Global_{timestamp}.xlsx" if self.region == "Global" else f"Segment_Ranking_{self.region}_{timestamp}.xlsx"
-                # Create outputs directory if it doesn't exist
-                outputs_dir = os.path.join("outputs")
-                os.makedirs(outputs_dir, exist_ok=True)
-                excel_path = os.path.join(outputs_dir, excel_filename)
-                df.to_excel(excel_path, index=False)
-                print(f"[LOG] Segment Ranking table exported to Excel: {excel_path}")
-            else:
-                print("[WARN] Could not parse Segment Ranking markdown table for Excel export.")
         else:
-            # Run CompanyAgent and SegmentRankingAgent even without company_capabilities.txt
-            print("[LOG] No company_capabilities.txt found, but running Company and Segment Ranking agents with empty capabilities.")
-            if 'company' not in self.agents:
-                self.agents['company'] = CompanyAgent(self._llm_with_token_logging("Company Agent"))
-            company_result = self.agents['company'].run(
-                user_prompt=user_prompt,
-                prior_context={
-                    'vertical_result': vertical_result,
-                    'geo_result': geo_result,
-                    'segment_result': segment_result,
-                    'positioning_result': positioning_result
-                },
-                rag_context=""
-            )
-            self.context['company_result'] = company_result
-            
-            # Step 6: Segment Ranking Agent (always run)
-            if 'segment_ranking' not in self.agents:
-                self.agents['segment_ranking'] = SegmentRankingAgent(self._llm_with_token_logging("Segment Ranking Agent"))
-            segment_ranking_md = self.agents['segment_ranking'].run(
-                prior_context={
-                    'segment_result': segment_result,
-                    'positioning_result': positioning_result
-                },
-                company_capabilities=""
-            )
-            self.context['segment_ranking_md'] = segment_ranking_md
-            # Export to Excel
-            import re
-            import pandas as pd
-            lines = segment_ranking_md.splitlines()
-            table_lines = [l for l in lines if l.strip().startswith('|')]
-            if table_lines:
-                table_str = '\n'.join([l.strip().strip('|') for l in table_lines])
-                from io import StringIO
-                df = pd.read_csv(StringIO(table_str), sep='|')
-                df.columns = [c.strip() for c in df.columns]
-                df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                excel_filename = f"Segment_Ranking_Global_{timestamp}.xlsx" if self.region == "Global" else f"Segment_Ranking_{self.region}_{timestamp}.xlsx"
-                # Create outputs directory if it doesn't exist
-                outputs_dir = os.path.join("outputs")
-                os.makedirs(outputs_dir, exist_ok=True)
-                excel_path = os.path.join(outputs_dir, excel_filename)
-                df.to_excel(excel_path, index=False)
-                print(f"[LOG] Segment Ranking table exported to Excel: {excel_path}")
-            else:
-                print("[WARN] Could not parse Segment Ranking markdown table for Excel export.")
+            print("[LOG] Company Agent skipped - no company context available.")
+            # Set empty company result for consistency
+            self.context['company_result'] = ""
+
+        # Step 6: Segment Ranking Agent (always run)
+        if 'segment_ranking' not in self.agents:
+            self.agents['segment_ranking'] = SegmentRankingAgent(self._llm_with_token_logging("Segment Ranking Agent"))
+        
+        segment_ranking_md = self.agents['segment_ranking'].run(
+            prior_context={
+                'segment_result': segment_result,
+                'positioning_result': positioning_result
+            },
+            company_capabilities=company_capabilities if company_agent_should_run else ""
+        )
+        self.context['segment_ranking_md'] = segment_ranking_md
+        
+        # Export Segment Ranking to Excel
+        self._export_segment_ranking_to_excel(segment_ranking_md)
 
         # Print final summary
         print(f"\n=== Token & Cost Summary ===")
@@ -339,6 +334,42 @@ class Planner:
         print("\n--- End of Run Verification ---\n")
         sys.stdout.flush()
         return self.context
+
+    def _export_segment_ranking_to_excel(self, segment_ranking_md: str):
+        """Export segment ranking markdown table to Excel file."""
+        import re
+        import pandas as pd
+        from io import StringIO
+        
+        # Parse markdown table to DataFrame
+        lines = segment_ranking_md.splitlines()
+        table_lines = [l for l in lines if l.strip().startswith('|')]
+        
+        if table_lines:
+            # Remove leading/trailing pipes and whitespace
+            table_str = '\n'.join([l.strip().strip('|') for l in table_lines])
+            try:
+                df = pd.read_csv(StringIO(table_str), sep='|')
+                # Clean up column names and whitespace
+                df.columns = [c.strip() for c in df.columns]
+                df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+                
+                # Generate filename with timestamp
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                excel_filename = f"Segment_Ranking_Global_{timestamp}.xlsx" if self.region == "Global" else f"Segment_Ranking_{self.region}_{timestamp}.xlsx"
+                
+                # Create outputs directory if it doesn't exist
+                outputs_dir = os.path.join("outputs")
+                os.makedirs(outputs_dir, exist_ok=True)
+                excel_path = os.path.join(outputs_dir, excel_filename)
+                
+                # Export to Excel
+                df.to_excel(excel_path, index=False)
+                print(f"[LOG] Segment Ranking table exported to Excel: {excel_path}")
+            except Exception as e:
+                print(f"[WARN] Failed to export Segment Ranking table to Excel: {e}")
+        else:
+            print("[WARN] Could not parse Segment Ranking markdown table for Excel export.")
 
     def _assemble_report(self, user_prompt: str) -> str:
         report = (
