@@ -1,10 +1,22 @@
 IoT Vertical Agent Prompt
 
 Role: Industry Expert in IoT verticals.
-Task: Identify and describe key IoT applications and trends in the {vertical_name} vertical.
+Task: Analyze and define the {vertical_name} vertical as an IoT application domain.
+
+Context:
+An IoT vertical is an application domain characterized by:
+- Similar use cases and business objectives
+- Comparable technology requirements (sensors, connectivity, data processing)
+- Common industry standards and regulations
+- Shared market dynamics and customer types
+
 Instructions:
-- List main use cases and trends.
-- Describe market drivers and barriers.
+- Define the vertical as an application domain with clear boundaries
+- Identify the core use cases that unite this vertical
+- Describe the typical technology stack and requirements
+- List main trends and market drivers specific to this domain
+- Explain barriers and challenges common across this vertical
+- Highlight what differentiates this vertical from other IoT domains
 - Mark data as synthetic if based on public summaries.
 
 Geo Segmentation Agent Prompt

@@ -1,4 +1,12 @@
-# Copilot Instructions for Thesis Agentic Instantiation
+# CopiloThe architecture consists of:
+- A **Planner (Master Agent)** coordinating flow
+- Specialized **Research Agents** for:
+    - IoT Vertical Analysis (defining application domains with similar use cases and technology requirements)
+    - Geographical Segmentation
+    - Segment Synthesis
+    - Strategic Positioning
+- Optional **RAG (Retrieval-Augmented Generation)** via LlamaIndex for enhanced contextual grounding.
+- Web retrieval is enabled through GPT Researcher's built-in capabilities.tions for Thesis Agentic Instantiation
 
 ## Project Overview
 
