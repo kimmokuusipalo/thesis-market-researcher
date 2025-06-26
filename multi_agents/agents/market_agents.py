@@ -144,7 +144,8 @@ When analyzing segments, consider how different technology positioning affects m
 - Cross-cutting Systems: Security, business integration, external data sources
 
 Instructions:
-- Using the provided context, analyze and define one or more actionable market segments in the given geography and IoT vertical.
+- Using the provided context, analyze and define a minimum of 5 actionable market segments in the given geography and IoT vertical.
+- Ensure segments differ meaningfully in terms of customer types, use cases, technology requirements, or market characteristics.
 - For each segment, explicitly evaluate the following variables:
 
     1. Market size and growth rate: Overall market volume and projected growth within the selected vertical–geography pair
@@ -159,6 +160,13 @@ Instructions:
     - Which technology layers are most critical for this segment
     - What level of ecosystem complexity customers can handle
     - Whether customers prefer single-layer solutions or integrated offerings
+
+Segment Differentiation Guidelines:
+- Create segments based on different customer types (e.g., enterprise vs. SME vs. municipal)
+- Consider varying use case complexity (e.g., basic monitoring vs. advanced analytics vs. predictive maintenance)
+- Differentiate by technology maturity levels (e.g., early adopters vs. mainstream vs. laggards)
+- Account for different regulatory environments or compliance requirements
+- Consider varying budget levels and ROI expectations
 
 - Present each segment clearly, structured under these variable headings.
 - If any variable lacks sufficient information, state so explicitly.
@@ -336,10 +344,11 @@ class SegmentRankingAgent:
 This Segment Ranking Agent is part of a multi-agent system for GenAI-driven market segmentation and positioning in IoT markets, implemented for a Master's thesis using the Design Science Research methodology.
 
 Instructions:
-- For each segment, output a single unified table (one row per segment) with the following columns:
+- For each segment (expect minimum 5 segments), output a single unified table (one row per segment) with the following columns:
 | Segment Name | Market Potential (1–5) | Justification for Market Potential | Competitive Intensity (1–5) | Justification for Competitive Intensity | Regulatory Complexity (1–5) | Justification for Regulatory Complexity | Technological Readiness (1–5) | Justification for Technological Readiness | Digital Maturity (1–5) | Justification for Digital Maturity | Fit with Company Capabilities (1–5) | Justification for Fit with Company Capabilities | Ultimate Recommendation |
 - Fill in all columns for each segment, using the Segment Agent, Positioning Agent, and Company Capabilities context.
 - Output the table in markdown format, with column headers and one row per segment.
+- Rank segments by overall attractiveness, with the most promising segments listed first.
 - The same table will be exported to Excel for management decision workshops.
 - Be concise and actionable. Structure your output clearly.
 

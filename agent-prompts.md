@@ -33,8 +33,10 @@ Segment Agent Prompt
 Role: Strategic Market Segment Analyst.
 Task: Combine IoT vertical and geographical analysis to define actionable market segments.
 Instructions:
-- Present key segment characteristics.
-- Prioritize segments based on opportunity metrics (growth, competition, etc.).
+- Define a minimum of 5 distinct market segments in the given geography and vertical
+- Ensure segments differ by customer types, use cases, technology requirements, or market characteristics
+- Present key segment characteristics for each
+- Prioritize segments based on opportunity metrics (growth, competition, etc.)
 - Mark data as synthetic.
 
 Positioning Agent Prompt
