@@ -69,18 +69,70 @@ async def run_research_task(query, websocket=None, stream_output=None, tone=Tone
     return research_report
 
 def extract_vertical_and_region(user_prompt: str):
-    import re
-    # Try to match "<vertical> in <region>" (case-insensitive)
-    match = re.search(r"(.+?)\s+in\s+([A-Za-z0-9 ,()]+)$", user_prompt.strip(), re.IGNORECASE)
-    if match:
-        vertical = match.group(1).strip()
-        region = match.group(2).strip()
-        return vertical, region
-    # fallback: use defaults
-    return "Smart Cities", "Finland"
+    """
+    Extract IoT vertical and region from user prompt.
+    Returns (vertical_name, region).
+    For global analysis, returns 'Global' as region.
+    """
+    # Check for global/worldwide keywords first
+    global_keywords = ["globally", "global", "worldwide", "international", "best markets", "all countries", "all geographies", "all regions"]
+    is_global = any(kw in user_prompt.lower() for kw in global_keywords)
+    
+    if is_global:
+        region = "Global"
+    else:
+        # Original region extraction logic
+        if "finland" in user_prompt.lower():
+            region = "Finland"
+        elif "germany" in user_prompt.lower():
+            region = "Germany"
+        elif "france" in user_prompt.lower():
+            region = "France"
+        elif "spain" in user_prompt.lower():
+            region = "Spain"
+        elif "united states" in user_prompt.lower() or "usa" in user_prompt.lower():
+            region = "United States"
+        elif "united kingdom" in user_prompt.lower() or "uk" in user_prompt.lower():
+            region = "United Kingdom"
+        elif "canada" in user_prompt.lower():
+            region = "Canada"
+        elif "australia" in user_prompt.lower():
+            region = "Australia"
+        elif "japan" in user_prompt.lower():
+            region = "Japan"
+        elif "china" in user_prompt.lower():
+            region = "China"
+        else:
+            region = "Finland"  # Default fallback
+
+    # Extract vertical
+    if "agriculture" in user_prompt.lower() or "farming" in user_prompt.lower():
+        vertical = "Smart Agriculture"
+    elif "waste" in user_prompt.lower():
+        vertical = "Smart Waste Management"
+    elif "manufacturing" in user_prompt.lower():
+        vertical = "Smart Manufacturing"
+    elif "logistics" in user_prompt.lower():
+        vertical = "Smart Logistics"
+    elif "building" in user_prompt.lower() or "facility" in user_prompt.lower():
+        vertical = "Smart Buildings"
+    elif "energy" in user_prompt.lower():
+        vertical = "Smart Energy"
+    elif "transport" in user_prompt.lower():
+        vertical = "Smart Transportation"
+    elif "health" in user_prompt.lower():
+        vertical = "Smart Healthcare"
+    elif "retail" in user_prompt.lower():
+        vertical = "Smart Retail"
+    elif "city" in user_prompt.lower() or "cities" in user_prompt.lower():
+        vertical = "Smart Cities"
+    else:
+        vertical = "Smart Agriculture"  # Default fallback
+
+    return vertical, region
 
 def detect_geo_mode(user_prompt: str) -> str:
-    multi_keywords = ["best segments", "compare", "multiple markets", "across geographies", "all geographies", "all regions", "all countries"]
+    multi_keywords = ["best segments", "compare", "multiple markets", "across geographies", "all geographies", "all regions", "all countries", "globally", "global", "worldwide", "international", "best markets"]
     for kw in multi_keywords:
         if kw in user_prompt.lower():
             return "multi"

@@ -259,15 +259,64 @@ class Planner:
                 df.columns = [c.strip() for c in df.columns]
                 df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                excel_filename = f"Segment_Ranking_{self.region}_{timestamp}.xlsx"
-                excel_path = os.path.join("outputs", excel_filename)
+                excel_filename = f"Segment_Ranking_Global_{timestamp}.xlsx" if self.region == "Global" else f"Segment_Ranking_{self.region}_{timestamp}.xlsx"
+                # Create outputs directory if it doesn't exist
+                outputs_dir = os.path.join("outputs")
+                os.makedirs(outputs_dir, exist_ok=True)
+                excel_path = os.path.join(outputs_dir, excel_filename)
                 df.to_excel(excel_path, index=False)
                 print(f"[LOG] Segment Ranking table exported to Excel: {excel_path}")
             else:
                 print("[WARN] Could not parse Segment Ranking markdown table for Excel export.")
         else:
-            self.context['company_result'] = None
-            self.context['segment_ranking_md'] = None
+            # Run CompanyAgent and SegmentRankingAgent even without company_capabilities.txt
+            print("[LOG] No company_capabilities.txt found, but running Company and Segment Ranking agents with empty capabilities.")
+            if 'company' not in self.agents:
+                self.agents['company'] = CompanyAgent(self._llm_with_token_logging("Company Agent"))
+            company_result = self.agents['company'].run(
+                user_prompt=user_prompt,
+                prior_context={
+                    'vertical_result': vertical_result,
+                    'geo_result': geo_result,
+                    'segment_result': segment_result,
+                    'positioning_result': positioning_result
+                },
+                rag_context=""
+            )
+            self.context['company_result'] = company_result
+            
+            # Step 6: Segment Ranking Agent (always run)
+            if 'segment_ranking' not in self.agents:
+                self.agents['segment_ranking'] = SegmentRankingAgent(self._llm_with_token_logging("Segment Ranking Agent"))
+            segment_ranking_md = self.agents['segment_ranking'].run(
+                prior_context={
+                    'segment_result': segment_result,
+                    'positioning_result': positioning_result
+                },
+                company_capabilities=""
+            )
+            self.context['segment_ranking_md'] = segment_ranking_md
+            # Export to Excel
+            import re
+            import pandas as pd
+            lines = segment_ranking_md.splitlines()
+            table_lines = [l for l in lines if l.strip().startswith('|')]
+            if table_lines:
+                table_str = '\n'.join([l.strip().strip('|') for l in table_lines])
+                from io import StringIO
+                df = pd.read_csv(StringIO(table_str), sep='|')
+                df.columns = [c.strip() for c in df.columns]
+                df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                excel_filename = f"Segment_Ranking_Global_{timestamp}.xlsx" if self.region == "Global" else f"Segment_Ranking_{self.region}_{timestamp}.xlsx"
+                # Create outputs directory if it doesn't exist
+                outputs_dir = os.path.join("outputs")
+                os.makedirs(outputs_dir, exist_ok=True)
+                excel_path = os.path.join(outputs_dir, excel_filename)
+                df.to_excel(excel_path, index=False)
+                print(f"[LOG] Segment Ranking table exported to Excel: {excel_path}")
+            else:
+                print("[WARN] Could not parse Segment Ranking markdown table for Excel export.")
 
         # Print final summary
         print(f"\n=== Token & Cost Summary ===")
