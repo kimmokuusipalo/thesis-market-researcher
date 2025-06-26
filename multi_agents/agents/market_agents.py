@@ -128,13 +128,13 @@ Instructions:
 - Using the provided context, analyze and define one or more actionable market segments in the given geography and IoT vertical.
 - For each segment, explicitly evaluate the following variables:
 
-    1. Market size and growth rate
-    2. Profitability potential
-    3. Regulatory requirements (certifications, standards, data privacy laws)
-    4. Competitive intensity (market concentration, number of players)
-    5. Digital maturity of customers (PoC readiness, full-scale adoption potential)
-    6. Customer consolidation (types of buyers, complexity of buying centers)
-    7. Technological readiness (existing IoT use, integration capabilities, cloud readiness)
+    1. Market size and growth rate: Overall market volume and projected growth within the selected vertical–geography pair
+    2. Profitability potential: Expected ROI and margin levels relative to solution scope, pricing model, and buyer willingness to pay
+    3. Regulatory requirements and fit: Certification, compliance, and data regulation conditions (e.g., CE, FCC, GDPR, NIS2)
+    4. Competitive intensity: Degree of saturation and strength of rival offerings
+    5. Digital maturity: Organization readiness of segment to adopt and scale digital IoT systems
+    6. Customer consolidation: Centralization of purchasing decisions affecting sales cycle complexity
+    7. Technological readiness: Business systems, external information sources, and existing IoT systems integrability
 
 - Present each segment clearly, structured under these variable headings.
 - If any variable lacks sufficient information, state so explicitly.
@@ -174,13 +174,13 @@ You will receive:\n"
 - Private company capability description (not to be included in report)\n\n"
 Instructions:\n\n"
 1. Evaluate each of the following market variables (from the Segment Agent):\n"
-    - Market size and growth rate\n"
-    - Profitability potential\n"
-    - Regulatory requirements\n"
-    - Competitive intensity\n"
-    - Digital maturity of customers\n"
-    - Customer consolidation\n"
-    - Technological readiness\n\n"
+    - Market size and growth rate: Overall market volume and projected growth within the selected vertical–geography pair\n"
+    - Profitability potential: Expected ROI and margin levels relative to solution scope, pricing model, and buyer willingness to pay\n"
+    - Regulatory requirements and fit: Certification, compliance, and data regulation conditions (e.g., CE, FCC, GDPR, NIS2)\n"
+    - Competitive intensity: Degree of saturation and strength of rival offerings\n"
+    - Digital maturity: Organization readiness of segment to adopt and scale digital IoT systems\n"
+    - Customer consolidation: Centralization of purchasing decisions affecting sales cycle complexity\n"
+    - Technological readiness: Business systems, external information sources, and existing IoT systems integrability\n\n"
 2. Based strictly on the Segment Agent output and market variable scores, recommend one of the following IoT system architecture positioning layers:\n"
     - Device Layer\n"
     - Middleware Layer\n"
@@ -236,13 +236,13 @@ You will receive:
 
 Instructions:
 1. For each market variable, rate from 1 (poor fit) to 5 (excellent fit) how well the company is positioned to compete, with a brief justification:
-    - Market size and growth rate
-    - Profitability potential
-    - Regulatory requirements
-    - Competitive intensity
-    - Digital maturity of customers
-    - Customer consolidation
-    - Technological readiness
+    - Market size and growth rate: Overall market volume and projected growth within the selected vertical–geography pair
+    - Profitability potential: Expected ROI and margin levels relative to solution scope, pricing model, and buyer willingness to pay
+    - Regulatory requirements and fit: Certification, compliance, and data regulation conditions (e.g., CE, FCC, GDPR, NIS2)
+    - Competitive intensity: Degree of saturation and strength of rival offerings
+    - Digital maturity: Organization readiness of segment to adopt and scale digital IoT systems
+    - Customer consolidation: Centralization of purchasing decisions affecting sales cycle complexity
+    - Technological readiness: Business systems, external information sources, and existing IoT systems integrability
 2. Provide an ultimate recommendation:
     - Strongly recommended
     - Acceptable with caveats
@@ -280,7 +280,7 @@ This Segment Ranking Agent is part of a multi-agent system for GenAI-driven mark
 
 Instructions:
 - For each segment, output a single unified table (one row per segment) with the following columns:
-| Segment Name | Market Potential (1–5) | Justification for Market Potential | Competitive Intensity (1–5) | Justification for Competitive Intensity | Regulatory Complexity (1–5) | Justification for Regulatory Complexity | Technological Readiness (1–5) | Justification for Technological Readiness | Digital Maturity of Customers (1–5) | Justification for Digital Maturity of Customers | Fit with Company Capabilities (1–5) | Justification for Fit with Company Capabilities | Ultimate Recommendation |
+| Segment Name | Market Potential (1–5) | Justification for Market Potential | Competitive Intensity (1–5) | Justification for Competitive Intensity | Regulatory Complexity (1–5) | Justification for Regulatory Complexity | Technological Readiness (1–5) | Justification for Technological Readiness | Digital Maturity (1–5) | Justification for Digital Maturity | Fit with Company Capabilities (1–5) | Justification for Fit with Company Capabilities | Ultimate Recommendation |
 - Fill in all columns for each segment, using the Segment Agent, Positioning Agent, and Company Capabilities context.
 - Output the table in markdown format, with column headers and one row per segment.
 - The same table will be exported to Excel for management decision workshops.
